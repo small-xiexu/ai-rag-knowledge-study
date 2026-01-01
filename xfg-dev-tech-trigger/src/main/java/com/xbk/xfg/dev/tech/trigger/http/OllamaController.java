@@ -26,7 +26,7 @@ public class OllamaController implements IAiService {
      */
     @Override
     @GetMapping("generate")
-    public ChatResponse generate(@RequestParam String model, @RequestParam String message) {
+    public ChatResponse generate(@RequestParam("model") String model, @RequestParam("message") String message) {
         return chatClient.call(new Prompt(message, OllamaOptions.create().withModel(model)));
     }
 
@@ -36,7 +36,7 @@ public class OllamaController implements IAiService {
      */
     @Override
     @GetMapping(value = "generate_stream", produces = "text/event-stream")
-    public Flux<ChatResponse> generateStream(@RequestParam String model, @RequestParam String message) {
+    public Flux<ChatResponse> generateStream(@RequestParam("model") String model, @RequestParam("message") String message) {
         return chatClient.stream(new Prompt(message, OllamaOptions.create().withModel(model)));
     }
 

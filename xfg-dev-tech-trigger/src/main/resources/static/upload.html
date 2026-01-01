@@ -26,20 +26,12 @@
 
         /* 拖拽区域动画 */
         .drop-zone {
-            border: 2px dashed #d1d5db;
             transition: all 0.3s ease;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         }
 
         .drop-zone:hover,
         .drop-zone.drag-over {
-            border-color: #667eea;
-            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
             transform: scale(1.01);
-        }
-
-        .drop-zone.drag-over {
-            box-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
         }
 
         /* 文件图标动画 */
@@ -52,32 +44,14 @@
             50% { transform: translateY(-8px); }
         }
 
-        /* 文件项淡入动画 */
-        .file-item {
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
         /* 提交按钮 */
         .submit-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
 
         .submit-btn:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
         }
 
         .submit-btn:disabled {
@@ -119,39 +93,20 @@
 
         /* 滚动条 */
         .file-list::-webkit-scrollbar {
-            width: 6px;
+            width: 4px;
         }
 
         .file-list::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 3px;
+            background: transparent;
         }
 
         .file-list::-webkit-scrollbar-thumb {
             background: #cbd5e1;
-            border-radius: 3px;
+            border-radius: 2px;
         }
-
-        .file-list::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-
-        /* 文件类型标签 */
-        .file-badge {
-            font-size: 0.65rem;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .badge-md { background: #dbeafe; color: #1d4ed8; }
-        .badge-txt { background: #dcfce7; color: #15803d; }
-        .badge-text { background: #dcfce7; color: #15803d; }
-        .badge-sql { background: #fef3c7; color: #b45309; }
     </style>
 </head>
-<body class="flex items-center justify-center p-4">
+<body class="flex flex-col items-center justify-center min-h-screen py-8 px-4">
     <!-- Toast 提示 -->
     <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 hidden">
         <div class="success-toast flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl text-white font-medium">
@@ -161,134 +116,210 @@
     </div>
 
     <!-- 主卡片 -->
-    <div class="glass-card rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
+    <div class="glass-card rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden relative">
         <!-- 头部 -->
-        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-8 py-6">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold text-white">知识库上传</h1>
-                        <p class="text-white/80 text-sm mt-1">上传文件构建您的 RAG 知识库</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <a href="knowledge.html" class="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors backdrop-blur" title="知识库列表">
+        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-6 pb-20">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                         </svg>
-                        <span class="text-white font-medium text-sm">列表</span>
-                    </a>
-                    <a href="ai-chat.html" class="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors backdrop-blur" title="返回聊天">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">知识库上传</h1>
+                        <p class="text-white/80 text-xs mt-0.5">上传文件构建您的 RAG 知识库</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <a href="knowledge.html" class="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors backdrop-blur text-white text-xs font-medium">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                         </svg>
-                        <span class="text-white font-medium text-sm">聊天</span>
+                        列表
+                    </a>
+                    <a href="ai-chat.html" class="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors backdrop-blur text-white text-xs font-medium">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                        </svg>
+                        聊天
                     </a>
                 </div>
             </div>
         </div>
 
         <!-- 内容区域 -->
-        <div class="p-8 space-y-6">
-            <!-- 知识库名称输入 -->
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    <span class="flex items-center gap-2">
-                        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                        </svg>
+        <div class="px-6 pb-8 -mt-14 relative z-10">
+            <!-- 选项卡 -->
+            <div class="bg-white rounded-2xl shadow-lg p-1.5 flex mb-6">
+                <button onclick="switchTab('file')" id="fileTab" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-900 shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    文档上传
+                </button>
+                <button onclick="switchTab('git')" id="gitTab" class="flex-1 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-700 transition-all flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                    </svg>
+                    Git 仓库
+                </button>
+            </div>
+
+            <!-- 文件上传部分 -->
+            <div id="fileUploadSection" class="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-white/50 space-y-5">
+                <!-- 知识库名称输入 -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                         知识库名称
-                    </span>
-                </label>
-                <input 
-                    type="text" 
-                    id="ragTagInput"
-                    class="input-field w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-gray-700 placeholder-gray-400"
-                    placeholder="输入知识库标签名称，例如：产品手册、技术文档"
-                >
-            </div>
-
-            <!-- 文件上传区域 -->
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    <span class="flex items-center gap-2">
-                        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        上传文件
-                    </span>
-                </label>
-
-                <!-- 拖拽上传区域 -->
-                <div 
-                    id="dropZone" 
-                    class="drop-zone rounded-2xl p-8 text-center cursor-pointer"
-                    onclick="document.getElementById('fileInput').click()"
-                >
+                    </label>
                     <input 
-                        type="file" 
-                        id="fileInput" 
-                        multiple 
-                        accept=".md,.txt,.text,.sql"
-                        class="hidden"
+                        type="text" 
+                        id="ragTagInput"
+                        class="input-field w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-gray-700 text-sm placeholder-gray-400 bg-white"
+                        placeholder="输入知识库标签名称，例如：产品手册、技术文档"
                     >
-                    <div class="file-icon mb-4">
-                        <svg class="w-16 h-16 mx-auto text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                        </svg>
-                    </div>
-                    <p class="text-gray-600 font-medium mb-2">拖拽文件到这里，或点击选择</p>
-                    <p class="text-gray-400 text-sm">支持 <span class="font-mono text-indigo-500">.md</span> <span class="font-mono text-green-500">.txt</span> <span class="font-mono text-green-500">.text</span> <span class="font-mono text-amber-500">.sql</span> 格式</p>
                 </div>
 
-                <!-- 文件列表 -->
-                <div id="fileListContainer" class="mt-4 hidden">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-medium text-gray-600">已选择文件</span>
-                        <button 
-                            id="clearAllBtn"
-                            class="text-xs text-red-500 hover:text-red-600 font-medium transition-colors"
+                <!-- 上传文件 -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        上传文件
+                    </label>
+                    <div 
+                        id="dropZone" 
+                        class="drop-zone rounded-xl p-8 text-center cursor-pointer bg-gray-50 border-2 border-dashed border-gray-200 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all"
+                        onclick="document.getElementById('fileInput').click()"
+                    >
+                        <input 
+                            type="file" 
+                            id="fileInput" 
+                            multiple 
+                            accept=".md,.txt,.text,.sql"
+                            class="hidden"
                         >
-                            清空全部
-                        </button>
+                        <div class="file-icon mb-3">
+                            <svg class="w-12 h-12 mx-auto text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                        </div>
+                        <p class="text-gray-600 font-medium text-sm mb-1">拖拽文件到这里，或点击选择</p>
+                        <p class="text-gray-400 text-xs">支持 <span class="font-mono text-indigo-500">.md</span> <span class="font-mono text-green-500">.txt</span> <span class="font-mono text-amber-500">.sql</span> 格式</p>
                     </div>
-                    <div id="fileList" class="file-list space-y-2 max-h-48 overflow-y-auto pr-2"></div>
+
+                    <!-- 文件列表 -->
+                    <div id="fileListContainer" class="mt-4 hidden">
+                        <div class="flex items-center justify-between mb-2 px-1">
+                            <span class="text-xs font-medium text-gray-500">已选文件</span>
+                            <button 
+                                id="clearAllBtn"
+                                class="text-xs text-red-500 hover:text-red-600 font-medium transition-colors"
+                            >
+                                清空
+                            </button>
+                        </div>
+                        <div id="fileList" class="file-list space-y-2 max-h-32 overflow-y-auto pr-1"></div>
+                    </div>
                 </div>
+
+                <!-- 进度条 -->
+                <div id="progressContainer" class="hidden">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-xs font-medium text-gray-500">上传中...</span>
+                        <span id="progressText" class="text-xs text-indigo-600 font-bold">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                        <div id="progressBar" class="progress-bar bg-gradient-to-r from-indigo-500 to-purple-500 h-1.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <button 
+                    id="submitBtn" 
+                    class="submit-btn w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+                    disabled
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <span>上传到知识库</span>
+                </button>
             </div>
 
-            <!-- 上传进度 -->
-            <div id="progressContainer" class="hidden">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-600">上传进度</span>
-                    <span id="progressText" class="text-sm text-indigo-600 font-medium">0%</span>
+            <!-- Git 仓库部分 -->
+            <div id="gitRepoSection" class="hidden bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-white/50 space-y-5">
+                <!-- 仓库地址 -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        仓库地址 (HTTPS)
+                    </label>
+                    <input 
+                        type="text" 
+                        id="repoUrlInput"
+                        class="input-field w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-gray-700 text-sm placeholder-gray-400 bg-white"
+                        placeholder="https://github.com/username/repository.git"
+                    >
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                    <div id="progressBar" class="progress-bar bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-full" style="width: 0%"></div>
+
+                <!-- 用户名 -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        用户名
+                    </label>
+                    <input 
+                        type="text" 
+                        id="gitUserInput"
+                        class="input-field w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-gray-700 text-sm placeholder-gray-400 bg-white"
+                        placeholder="GitHub/GitCode 用户名"
+                    >
                 </div>
+
+                <!-- 密码/Token -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        密码 / Token
+                    </label>
+                    <input 
+                        type="password" 
+                        id="gitTokenInput"
+                        class="input-field w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-gray-700 text-sm placeholder-gray-400 bg-white"
+                        placeholder="访问密钥 Personal Access Token"
+                    >
+                </div>
+
+                <!-- 进度条 -->
+                <div id="gitProgressContainer" class="hidden">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-xs font-medium text-gray-500">分析中...</span>
+                        <div class="flex items-center gap-2">
+                            <span id="gitProgressText" class="text-xs text-indigo-600 font-bold">处理中</span>
+                            <button onclick="cancelCurrentTask()" class="text-xs text-red-400 hover:text-red-500 font-medium hover:underline transition-colors flex items-center gap-0.5">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                        <div id="gitProgressBar" class="progress-bar bg-gradient-to-r from-gray-600 to-gray-800 h-1.5 rounded-full animate-pulse" style="width: 100%"></div>
+                    </div>
+                </div>
+
+                <!-- 导入按钮 -->
+                <button 
+                    id="analyzeGitBtn" 
+                    class="w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-black hover:to-gray-800 transition-all shadow-lg shadow-gray-500/20"
+                    disabled
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                    </svg>
+                    <span>导入仓库</span>
+                </button>
             </div>
 
-            <!-- 提交按钮 -->
-            <button 
-                id="submitBtn" 
-                class="submit-btn w-full py-4 rounded-xl text-white font-semibold text-lg flex items-center justify-center gap-2"
-                disabled
-            >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                </svg>
-                <span>上传到知识库</span>
-            </button>
-        </div>
-
-        <!-- 底部提示 -->
-        <div class="px-8 py-4 bg-gray-50 border-t border-gray-100">
-            <p class="text-center text-xs text-gray-500">
-                文件将被解析、切块、向量化后存入数据库，用于 RAG 检索增强
+            <!-- 底部提示 -->
+            <p class="text-center text-xs text-gray-400 mt-6">
+                仓库代码将被克隆、解析并向量化存储，用于代码智能问答
             </p>
         </div>
     </div>
@@ -296,8 +327,31 @@
     <script>
         // API 配置
         const API_URL = 'http://localhost:8090/api/v1/rag/file/upload';
+        const GIT_API_URL = '/api/v1/rag/analyze_git_repository';
+        const CANCEL_API_URL = '/api/v1/rag/cancel_task';
 
         // DOM 元素
+        const fileTab = document.getElementById('fileTab');
+        const gitTab = document.getElementById('gitTab');
+        const fileUploadSection = document.getElementById('fileUploadSection');
+        const gitRepoSection = document.getElementById('gitRepoSection');
+
+        // Tab 切换逻辑
+        function switchTab(tab) {
+            if (tab === 'file') {
+                fileTab.className = "flex-1 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-900 shadow-sm";
+                gitTab.className = "flex-1 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-700 transition-all flex items-center justify-center gap-2";
+                fileUploadSection.classList.remove('hidden');
+                gitRepoSection.classList.add('hidden');
+            } else {
+                gitTab.className = "flex-1 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-900 shadow-sm";
+                fileTab.className = "flex-1 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-700 transition-all flex items-center justify-center gap-2";
+                gitRepoSection.classList.remove('hidden');
+                fileUploadSection.classList.add('hidden');
+            }
+        }
+
+        // ==================== 文件上传逻辑 ====================
         const ragTagInput = document.getElementById('ragTagInput');
         const fileInput = document.getElementById('fileInput');
         const dropZone = document.getElementById('dropZone');
@@ -312,13 +366,9 @@
         const toastIcon = document.getElementById('toastIcon');
         const toastMessage = document.getElementById('toastMessage');
 
-        // 存储选中的文件
         let selectedFiles = [];
-
-        // 允许的文件类型
         const allowedTypes = ['md', 'txt', 'text', 'sql'];
 
-        // 显示 Toast
         function showToast(message, isSuccess = true) {
             const bgColor = isSuccess ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-red-500 to-rose-500';
             toast.querySelector('div').className = `success-toast flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl text-white font-medium ${bgColor}`;
@@ -327,169 +377,91 @@
                 : '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
             toastMessage.textContent = message;
             toast.classList.remove('hidden');
-            
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 3000);
+            setTimeout(() => { toast.classList.add('hidden'); }, 3000);
         }
 
-        // 获取文件扩展名
-        function getFileExtension(filename) {
-            return filename.split('.').pop().toLowerCase();
-        }
-
-        // 获取文件大小显示
+        function getFileExtension(filename) { return filename.split('.').pop().toLowerCase(); }
+        
         function formatFileSize(bytes) {
             if (bytes < 1024) return bytes + ' B';
             if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
             return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
-        // 获取文件类型徽章
         function getFileBadge(ext) {
-            const badges = {
-                'md': 'badge-md',
-                'txt': 'badge-txt',
-                'text': 'badge-text',
-                'sql': 'badge-sql'
-            };
-            return badges[ext] || 'badge-txt';
+            const badges = { 'md': 'bg-blue-100 text-blue-600', 'txt': 'bg-green-100 text-green-600', 'text': 'bg-green-100 text-green-600', 'sql': 'bg-amber-100 text-amber-600' };
+            return badges[ext] || 'bg-gray-100 text-gray-600';
         }
 
-        // 更新文件列表显示
         function updateFileList() {
             if (selectedFiles.length === 0) {
                 fileListContainer.classList.add('hidden');
-                return;
-            }
-
-            fileListContainer.classList.remove('hidden');
-            fileList.innerHTML = '';
-
-            selectedFiles.forEach((file, index) => {
-                const ext = getFileExtension(file.name);
-                const fileItem = document.createElement('div');
-                fileItem.className = 'file-item flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors';
-                fileItem.innerHTML = `
-                    <div class="flex items-center gap-3 min-w-0">
-                        <div class="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                        </div>
-                        <div class="min-w-0">
-                            <p class="text-sm font-medium text-gray-700 truncate">${file.name}</p>
-                            <div class="flex items-center gap-2 mt-1">
-                                <span class="file-badge ${getFileBadge(ext)}">${ext}</span>
-                                <span class="text-xs text-gray-400">${formatFileSize(file.size)}</span>
+            } else {
+                fileListContainer.classList.remove('hidden');
+                fileList.innerHTML = '';
+                selectedFiles.forEach((file, index) => {
+                    const ext = getFileExtension(file.name);
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100';
+                    fileItem.innerHTML = `
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-8 h-8 ${getFileBadge(ext)} rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold uppercase">${ext}</div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-medium text-gray-700 truncate">${file.name}</p>
+                                <p class="text-[10px] text-gray-400">${formatFileSize(file.size)}</p>
                             </div>
                         </div>
-                    </div>
-                    <button class="p-2 hover:bg-red-50 rounded-lg transition-colors group" onclick="removeFile(${index})">
-                        <svg class="w-4 h-4 text-gray-400 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                `;
-                fileList.appendChild(fileItem);
-            });
-
+                        <button class="p-1 hover:bg-red-50 rounded-md transition-colors group" onclick="removeFile(${index})">
+                            <svg class="w-4 h-4 text-gray-300 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    `;
+                    fileList.appendChild(fileItem);
+                });
+            }
             updateSubmitButton();
         }
 
-        // 移除文件
-        function removeFile(index) {
-            selectedFiles.splice(index, 1);
-            updateFileList();
-        }
+        function removeFile(index) { selectedFiles.splice(index, 1); updateFileList(); }
+        function clearAllFiles() { selectedFiles = []; fileInput.value = ''; updateFileList(); }
 
-        // 清空所有文件
-        function clearAllFiles() {
-            selectedFiles = [];
-            fileInput.value = '';
-            updateFileList();
-        }
-
-        // 添加文件
         function addFiles(files) {
             const validFiles = Array.from(files).filter(file => {
                 const ext = getFileExtension(file.name);
-                if (!allowedTypes.includes(ext)) {
-                    showToast(`不支持的文件类型: ${file.name}`, false);
-                    return false;
-                }
-                // 检查是否已存在同名文件
-                if (selectedFiles.some(f => f.name === file.name)) {
-                    showToast(`文件已存在: ${file.name}`, false);
-                    return false;
-                }
+                if (!allowedTypes.includes(ext)) { showToast(`不支持的文件类型: ${file.name}`, false); return false; }
+                if (selectedFiles.some(f => f.name === file.name)) { showToast(`文件已存在: ${file.name}`, false); return false; }
                 return true;
             });
-
             selectedFiles = [...selectedFiles, ...validFiles];
             updateFileList();
         }
 
-        // 更新提交按钮状态
         function updateSubmitButton() {
             const hasTag = ragTagInput.value.trim() !== '';
             const hasFiles = selectedFiles.length > 0;
             submitBtn.disabled = !(hasTag && hasFiles);
         }
 
-        // 拖拽事件处理
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('drag-over');
-        });
-
-        dropZone.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            addFiles(e.dataTransfer.files);
-        });
-
-        // 文件选择事件
-        fileInput.addEventListener('change', (e) => {
-            addFiles(e.target.files);
-        });
-
-        // 知识库名称输入事件
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-400', 'bg-indigo-50/30'); });
+        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('border-indigo-400', 'bg-indigo-50/30'); });
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('border-indigo-400', 'bg-indigo-50/30'); addFiles(e.dataTransfer.files); });
+        fileInput.addEventListener('change', (e) => { addFiles(e.target.files); });
         ragTagInput.addEventListener('input', updateSubmitButton);
-
-        // 清空全部按钮
         clearAllBtn.addEventListener('click', clearAllFiles);
 
-        // 提交上传
         submitBtn.addEventListener('click', async () => {
             const ragTag = ragTagInput.value.trim();
             if (!ragTag || selectedFiles.length === 0) return;
-
-            // 显示进度条
             progressContainer.classList.remove('hidden');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `
-                <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>上传中...</span>
-            `;
-
-            // 构建 FormData
+            submitBtn.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>上传中...</span>`;
+            
             const formData = new FormData();
             formData.append('ragTag', ragTag);
-            selectedFiles.forEach(file => {
-                formData.append('file', file);
-            });
+            selectedFiles.forEach(file => formData.append('file', file));
 
             try {
-                // 模拟进度（真实进度需要后端支持）
                 let progress = 0;
                 const progressInterval = setInterval(() => {
                     progress += Math.random() * 10;
@@ -498,20 +470,14 @@
                     progressText.textContent = Math.round(progress) + '%';
                 }, 200);
 
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    body: formData
-                });
-
+                const response = await fetch(API_URL, { method: 'POST', body: formData });
                 clearInterval(progressInterval);
                 progressBar.style.width = '100%';
                 progressText.textContent = '100%';
-
                 const result = await response.json();
 
                 if (result.code === '0000') {
                     showToast('文件上传成功！知识库已更新', true);
-                    // 清空表单
                     setTimeout(() => {
                         ragTagInput.value = '';
                         clearAllFiles();
@@ -519,23 +485,223 @@
                         progressBar.style.width = '0%';
                         progressText.textContent = '0%';
                     }, 1000);
-                } else {
-                    showToast(result.info || '上传失败，请重试', false);
-                }
-            } catch (error) {
-                console.error('上传错误:', error);
-                showToast('网络错误，请检查服务器连接', false);
-            } finally {
+                } else { showToast(result.info || '上传失败，请重试', false); }
+            } catch (error) { console.error('上传错误:', error); showToast('网络错误', false); } 
+            finally {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = `
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                    </svg>
-                    <span>上传到知识库</span>
-                `;
+                submitBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg><span>上传到知识库</span>`;
                 updateSubmitButton();
             }
         });
+
+        // ==================== Git 仓库逻辑 ====================
+        const repoUrlInput = document.getElementById('repoUrlInput');
+        const gitUserInput = document.getElementById('gitUserInput');
+        const gitTokenInput = document.getElementById('gitTokenInput');
+        const analyzeGitBtn = document.getElementById('analyzeGitBtn');
+        const gitProgressContainer = document.getElementById('gitProgressContainer');
+        const gitProgressBarEl = document.getElementById('gitProgressBar');
+        const gitProgressTextEl = document.getElementById('gitProgressText');
+
+        // 页面加载时检查是否有未完成的任务
+        window.addEventListener('load', () => {
+            const savedTaskId = localStorage.getItem('git_task_id');
+            if (savedTaskId) {
+                // 如果有未完成的任务，自动恢复 UI 并开始轮询
+                restoreTaskUI();
+                startPolling(savedTaskId);
+            }
+        });
+
+        // 取消任务逻辑
+        async function cancelCurrentTask() {
+            const taskId = localStorage.getItem('git_task_id');
+            if (!taskId) return;
+            
+            if (!confirm('确定要取消当前任务吗？')) return;
+
+            try {
+                // 调用后台取消接口
+                const params = new URLSearchParams();
+                params.append('taskId', taskId);
+                await fetch(`${CANCEL_API_URL}?${params.toString()}`, { method: 'POST' });
+                
+                // 立即在前端停止
+                finishTask(false, '任务已取消');
+            } catch (e) {
+                console.error('取消失败:', e);
+                showToast('取消请求发送失败', false);
+            }
+        }
+
+        function updateGitButton() {
+            const hasUrl = repoUrlInput.value.trim() !== '';
+            const hasUser = gitUserInput.value.trim() !== '';
+            const hasToken = gitTokenInput.value.trim() !== '';
+            analyzeGitBtn.disabled = !(hasUrl && hasUser && hasToken);
+        }
+
+        repoUrlInput.addEventListener('input', updateGitButton);
+        gitUserInput.addEventListener('input', updateGitButton);
+        gitTokenInput.addEventListener('input', updateGitButton);
+
+        analyzeGitBtn.addEventListener('click', async () => {
+            const repoUrl = repoUrlInput.value.trim();
+            const userName = gitUserInput.value.trim();
+            const token = gitTokenInput.value.trim();
+            if (!repoUrl || !userName || !token) return;
+
+            // 初始化 UI
+            gitProgressContainer.classList.remove('hidden');
+            analyzeGitBtn.disabled = true;
+            analyzeGitBtn.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>正在提交任务...</span>`;
+            
+            gitProgressBarEl.style.width = '0%';
+            gitProgressBarEl.classList.add('animate-pulse');
+            gitProgressTextEl.textContent = '准备中...';
+
+            try {
+                // 1. 提交任务
+                const params = new URLSearchParams();
+                params.append('repoUrl', repoUrl);
+                params.append('userName', userName);
+                params.append('token', token);
+                
+                const response = await fetch(`${GIT_API_URL}?${params.toString()}`, { method: 'POST' });
+                const result = await response.json();
+
+                if (result.code === '0000' && result.data) {
+                    const taskId = result.data;
+                    // 保存 taskId 到本地存储
+                    localStorage.setItem('git_task_id', taskId);
+                    
+                    analyzeGitBtn.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>正在分析中...</span>`;
+                    
+                    // 2. 开始轮询进度
+                    startPolling(taskId);
+
+                } else {
+                    showToast(result.info || '提交任务失败', false);
+                    resetGitButton();
+                }
+            } catch (error) {
+                console.error('Git 分析错误:', error);
+                showToast('网络错误，请检查服务器连接', false);
+                resetGitButton();
+            }
+        });
+
+        // 恢复 UI 状态
+        function restoreTaskUI() {
+            // 切换到 Git Tab
+            switchTab('git');
+            
+            gitProgressContainer.classList.remove('hidden');
+            analyzeGitBtn.disabled = true;
+            analyzeGitBtn.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>正在恢复进度...</span>`;
+            gitProgressBarEl.classList.add('animate-pulse');
+        }
+
+        // 抽离轮询逻辑
+        function startPolling(taskId) {
+            const pollInterval = setInterval(async () => {
+                // 每次轮询前再次检查 localStroage，如果已经被取消（比如用户点了按钮），停止轮询
+                if (!localStorage.getItem('git_task_id')) {
+                    clearInterval(pollInterval);
+                    return;
+                }
+
+                try {
+                    const progressRes = await fetch(`/api/v1/rag/query_task_progress?taskId=${taskId}`);
+                    const progressData = await progressRes.json();
+                    
+                    if (progressData.code === '0000' && progressData.data) {
+                        const { percentage, statusDescription, state } = progressData.data;
+                        
+                        // 更新 UI
+                        gitProgressBarEl.style.width = `${percentage}%`;
+                        gitProgressTextEl.textContent = `${statusDescription} (${percentage}%)`;
+                        
+                        // 任务完成
+                        if (state === 'COMPLETED') {
+                            clearInterval(pollInterval);
+                            finishTask(true, 'Git 仓库分析完成！知识库已创建');
+                        }
+                        // 任务失败 (包含被 CANCELLED 的情况)
+                        else if (state === 'FAILED' || state === 'CANCELLED') {
+                            clearInterval(pollInterval);
+                            finishTask(false, statusDescription || '任务已停止');
+                        }
+                    } else {
+                        // 任务不存在（可能是 Redis 过期了）
+                        clearInterval(pollInterval);
+                        finishTask(false, '任务已过期或不存在');
+                    }
+                } catch (e) {
+                    console.error('轮询出错:', e);
+                }
+            }, 1000);
+        }
+
+        // 结束任务处理
+        function finishTask(isSuccess, message) {
+            localStorage.removeItem('git_task_id'); // 清除存储
+            
+            gitProgressBarEl.classList.remove('animate-pulse');
+            if (isSuccess) {
+                // 成功态：绿色进度条，按钮变绿
+                gitProgressBarEl.classList.add('bg-green-500');
+                
+                // 立即更新按钮状态，给用户正反馈
+                analyzeGitBtn.className = "w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg shadow-green-500/20 transition-all";
+                analyzeGitBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>分析完成</span>`;
+                
+                showToast(message, true);
+                
+                // 延迟清空表单
+                resetGitForm();
+            } else {
+                // 失败/取消态：红色进度条
+                gitProgressBarEl.classList.add('bg-red-500');
+                showToast(message, false);
+                
+                // 立即重置按钮（允许重试）
+                resetGitButton();
+                
+                // 延迟隐藏进度条
+                setTimeout(() => {
+                    gitProgressContainer.classList.add('hidden');
+                    // 重置颜色
+                    gitProgressBarEl.classList.remove('bg-red-500');
+                    gitProgressBarEl.classList.remove('bg-green-500');
+                    gitProgressBarEl.classList.add('bg-gradient-to-r', 'from-gray-600', 'to-gray-800');
+                }, 3000);
+            }
+        }
+
+        function resetGitForm() {
+            // 延迟执行清空，让用户看到“分析完成”的状态
+            setTimeout(() => {
+                repoUrlInput.value = ''; 
+                gitUserInput.value = ''; 
+                gitTokenInput.value = '';
+                
+                // 隐藏进度条
+                gitProgressContainer.classList.add('hidden');
+                // 重置进度条颜色
+                gitProgressBarEl.classList.remove('bg-green-500');
+                
+                // 恢复按钮为初始状态
+                resetGitButton();
+            }, 2500);
+        }
+
+        function resetGitButton() {
+            analyzeGitBtn.className = "w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-black hover:to-gray-800 transition-all shadow-lg shadow-gray-500/20";
+            analyzeGitBtn.disabled = false; // 确保启用
+            analyzeGitBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg><span>导入仓库</span>`;
+            updateGitButton(); // 根据当前输入框状态决定是否禁用
+        }
     </script>
 </body>
 </html>
