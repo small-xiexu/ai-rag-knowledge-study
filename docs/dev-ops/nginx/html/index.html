@@ -1,119 +1,892 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AiRagKnowledge - By 小傅哥</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/highlight.js/highlight.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js/styles/github.min.css">
-    <link rel="stylesheet" href="css/index.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', '微软雅黑', -apple-system, BlinkMacSystemFont, sans-serif;
+            height: 100vh;
+            display: flex;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-280px);
+            margin-left: -280px;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .new-chat-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .chat-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .chat-list-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            padding: 8px 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .chat-list {
+            list-style: none;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .chat-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .chat-item.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .chat-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-item-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-item-date {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .chat-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .chat-item:hover .chat-actions {
+            opacity: 1;
+        }
+
+        .chat-action-btn {
+            padding: 4px 8px;
+            border: none;
+            background: transparent;
+            color: #6b7280;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .chat-action-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-action-btn.delete:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 顶部导航 */
+        .top-nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .toggle-sidebar-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .toggle-sidebar-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .nav-select {
+            padding: 10px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 13px;
+            background: white;
+            cursor: pointer;
+            min-width: 160px;
+            transition: all 0.2s;
+        }
+
+        .nav-select:focus {
+            outline: none;
+            border-color: #818cf8;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.1);
+        }
+
+        .nav-spacer {
+            flex: 1;
+        }
+
+        .upload-link {
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .upload-link:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        /* 聊天区域 */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .welcome-message {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .welcome-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 40px 60px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        }
+
+        .welcome-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .welcome-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .welcome-text {
+            color: #374151;
+            font-size: 16px;
+        }
+
+        /* 消息样式 */
+        .message {
+            max-width: 900px;
+            margin: 0 auto 16px;
+            padding: 20px 24px;
+            border-radius: 16px;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+        .message.user {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .message.assistant {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.15);
+        }
+
+        .message .copy-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 6px 12px;
+            background: rgba(102, 126, 234, 0.1);
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .message .copy-btn:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        /* 输入区域 */
+        .input-area {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+
+        .input-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .input-box {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s;
+        }
+
+        .input-box:focus-within {
+            border-color: #818cf8;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
+        }
+
+        .message-textarea {
+            width: 100%;
+            min-height: 80px;
+            max-height: 200px;
+            padding: 16px 20px;
+            border: none;
+            resize: none;
+            font-size: 14px;
+            line-height: 1.6;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .message-textarea::placeholder {
+            color: #9ca3af;
+        }
+
+        .input-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        .input-tools {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background 0.2s;
+        }
+
+        .tool-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .submit-btn {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Markdown 样式 */
+        .markdown-body {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #374151;
+        }
+
+        .markdown-body pre {
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            color: #d4d4d4;
+            padding: 0;
+        }
+
+        .markdown-body code {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 90%;
+        }
+
+        .markdown-body h1, .markdown-body h2, .markdown-body h3,
+        .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+            margin-top: 20px;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 24px;
+            margin: 12px 0;
+        }
+
+        .markdown-body li {
+            margin: 6px 0;
+        }
+
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+        }
+
+        .markdown-body th, .markdown-body td {
+            padding: 10px 14px;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+        }
+
+        .markdown-body th {
+            background: rgba(102, 126, 234, 0.05);
+            font-weight: 600;
+        }
+
+        .markdown-body blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 16px;
+            margin: 12px 0;
+            color: #6b7280;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100%;
+                z-index: 100;
+                box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+            }
+
+            .sidebar.collapsed {
+                transform: translateX(-100%);
+                margin-left: 0;
+            }
+
+            .nav-select {
+                min-width: auto;
+                flex: 1;
+            }
+        }
+    </style>
 </head>
-<body class="h-screen flex flex-col bg-gray-50">
-<!-- Top Navigation -->
-<nav class="border-b bg-white px-4 py-2 flex items-center gap-2">
-    <button id="toggleSidebar" class="p-2 hover:bg-gray-100 rounded-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 sidebar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path id="sidebarIconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-    </button>
+<body>
 
-    <button id="newChatBtn" class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        新聊天
-    </button>
+<!-- 侧边栏 -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <button class="new-chat-btn" id="newChatBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+            新建对话
+        </button>
+    </div>
+    <div class="chat-list-container">
+        <div class="chat-list-title">历史对话</div>
+        <ul class="chat-list" id="chatList"></ul>
+    </div>
+</aside>
 
-    <div class="flex-1 flex items-center gap-4">
-        <select id="aiModel" class="px-3 py-2 border rounded-lg flex-1 max-w-xs">
-            <option value="ollama" model="deepseek-r1:1.5b">deepseek-r1:1.5b</option>
-            <option value="openai" model="gpt-4o">gpt-4o</option>
+<!-- 主内容区 -->
+<div class="main-content">
+    <!-- 顶部导航 -->
+    <nav class="top-nav">
+        <button class="toggle-sidebar-btn" id="toggleSidebar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2">
+                <path id="sidebarIconPath" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+
+        <select class="nav-select" id="aiModel">
+            <option value="ollama" model="deepseek-r1:1.5b">🤖 deepseek-r1:1.5b</option>
+            <option value="openai" model="gpt-4o">🧠 gpt-4o</option>
         </select>
 
-        <select id="ragSelect" class="px-3 py-2 border rounded-lg flex-1 max-w-xs">
-            <option value="">选择一个知识库</option>
+        <select class="nav-select" id="ragSelect">
+            <option value="">📚 选择知识库</option>
         </select>
-    </div>
 
-    <div class="flex items-center gap-2">
-        <div class="relative group">
-            <button id="uploadMenuButton" class="p-2 hover:bg-gray-100 rounded-lg flex items-center gap-1">
-                🐙上传知识
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-            </button>
+        <div class="nav-spacer"></div>
 
-            <!-- 下拉菜单 -->
-            <div class="hidden absolute right-0 mt-2 w-48 bg-white border rounded-md shadow-lg z-50" id="uploadMenu">
-                <a href="upload.html" target="_blank" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
-                    📁 上传文件
-                </a>
-                <a href="git.html" target="_blank" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
-                    ⎇ 解析仓库（Git）
-                </a>
-            </div>
-        </div>
-    </div>
-</nav>
+        <a href="upload.html" target="_blank" class="upload-link">
+            📤 上传知识
+        </a>
+    </nav>
 
-<div class="flex-1 flex overflow-hidden">
-    <!-- 侧边栏结构 -->
-    <aside id="sidebar" class="w-64 bg-white border-r overflow-y-auto transition-all duration-300 ease-in-out">
-        <div class="p-4">
-            <h2 class="font-bold mb-2 text-lg">聊天列表</h2>
-            <ul id="chatList" class="space-y-1">
-                <!-- 聊天列表项结构修改 -->
-            </ul>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Chat Area -->
-        <main class="flex-1 overflow-auto p-4" id="chatArea">
-            <div id="welcomeMessage" class="flex items-center justify-center h-full">
-                <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                    <div class="flex items-center gap-2 justify-center text-gray-500 mb-4">
-                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                        Ollama 正在运行 🐏
-                    </div>
-                    <p class="text-gray-600">开始新的对话吧！</p>
+    <!-- 聊天区域 -->
+    <main class="chat-area" id="chatArea">
+        <div class="welcome-message" id="welcomeMessage">
+            <div class="welcome-card">
+                <div class="welcome-icon">🤖</div>
+                <div class="welcome-status">
+                    <span class="status-dot"></span>
+                    AI 助手已就绪
                 </div>
+                <p class="welcome-text">开始新的对话吧！</p>
             </div>
-        </main>
+        </div>
+    </main>
 
-        <!-- Input Area -->
-        <div class="p-4">
-            <div class="max-w-4xl mx-auto">
-                <div class="border rounded-lg bg-white">
-                    <div class="flex flex-col">
-                            <textarea
-                                    id="messageInput"
-                                    class="w-full px-3 py-2 min-h-[100px] focus:outline-none resize-none"
-                                    placeholder="输入一条消息..."></textarea>
-                        <div class="flex items-center justify-between px-3 py-2 border-t">
-                            <div class="flex items-center gap-2">
-                                <button class="p-2 hover:bg-gray-100 rounded-lg">🌐</button>
-                            </div>
-                            <button
-                                    id="submitBtn"
-                                    class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2">
-                                提交
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                        </div>
+    <!-- 输入区域 -->
+    <div class="input-area">
+        <div class="input-container">
+            <div class="input-box">
+                <textarea
+                    class="message-textarea"
+                    id="messageInput"
+                    placeholder="输入消息，按 Enter 发送..."
+                ></textarea>
+                <div class="input-actions">
+                    <div class="input-tools">
+                        <button class="tool-btn">🌐</button>
                     </div>
+                    <button class="submit-btn" id="submitBtn">
+                        发送
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<script src="js/index.js"></script>
+
+<script>
+const chatArea = document.getElementById('chatArea');
+const messageInput = document.getElementById('messageInput');
+const submitBtn = document.getElementById('submitBtn');
+const newChatBtn = document.getElementById('newChatBtn');
+const chatList = document.getElementById('chatList');
+const welcomeMessage = document.getElementById('welcomeMessage');
+const toggleSidebarBtn = document.getElementById('toggleSidebar');
+const sidebar = document.getElementById('sidebar');
+let currentEventSource = null;
+let currentChatId = null;
+
+// 获取知识库列表
+document.addEventListener('DOMContentLoaded', function() {
+    const loadRagOptions = () => {
+        const ragSelect = document.getElementById('ragSelect');
+
+        fetch('http://localhost:8090/api/v1/rag/query_rag_tag_list')
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === '0000' && data.data) {
+                    while (ragSelect.options.length > 1) {
+                        ragSelect.remove(1);
+                    }
+                    data.data.forEach(tag => {
+                        const option = new Option(`📁 ${tag}`, tag);
+                        ragSelect.add(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('获取知识库列表失败:', error);
+            });
+    };
+
+    loadRagOptions();
+});
+
+function createNewChat() {
+    const chatId = Date.now().toString();
+    currentChatId = chatId;
+    localStorage.setItem('currentChatId', chatId);
+    localStorage.setItem(`chat_${chatId}`, JSON.stringify({
+        name: '新对话',
+        messages: []
+    }));
+    updateChatList();
+    clearChatArea();
+}
+
+function deleteChat(chatId) {
+    if (confirm('确定要删除这个对话吗？')) {
+        localStorage.removeItem(`chat_${chatId}`);
+        if (currentChatId === chatId) {
+            createNewChat();
+        }
+        updateChatList();
+    }
+}
+
+function updateChatList() {
+    chatList.innerHTML = '';
+    const chats = Object.keys(localStorage)
+      .filter(key => key.startsWith('chat_'));
+
+    const currentChatIndex = chats.findIndex(key => key.split('_')[1] === currentChatId);
+    if (currentChatIndex !== -1) {
+        const currentChat = chats[currentChatIndex];
+        chats.splice(currentChatIndex, 1);
+        chats.unshift(currentChat);
+    }
+
+    chats.forEach(chatKey => {
+        let chatData = JSON.parse(localStorage.getItem(chatKey));
+        const chatId = chatKey.split('_')[1];
+
+        if (Array.isArray(chatData)) {
+            chatData = {
+                name: `对话 ${new Date(parseInt(chatId)).toLocaleDateString()}`,
+                messages: chatData
+            };
+            localStorage.setItem(chatKey, JSON.stringify(chatData));
+        }
+
+        const li = document.createElement('li');
+        li.className = `chat-item ${chatId === currentChatId ? 'active' : ''}`;
+        li.innerHTML = `
+            <div class="chat-item-content">
+                <div class="chat-item-name">${chatData.name}</div>
+                <div class="chat-item-date">${new Date(parseInt(chatId)).toLocaleDateString('zh-CN')}</div>
+            </div>
+            <div class="chat-actions">
+                <button class="chat-action-btn" onclick="event.stopPropagation(); renameChat('${chatId}')">重命名</button>
+                <button class="chat-action-btn delete" onclick="event.stopPropagation(); deleteChat('${chatId}')">删除</button>
+            </div>
+        `;
+        li.addEventListener('click', () => loadChat(chatId));
+        chatList.appendChild(li);
+    });
+}
+
+function renameChat(chatId) {
+    const chatKey = `chat_${chatId}`;
+    const chatData = JSON.parse(localStorage.getItem(chatKey));
+    const currentName = chatData.name || `对话 ${new Date(parseInt(chatId)).toLocaleString()}`;
+    const newName = prompt('请输入新的对话名称', currentName);
+
+    if (newName) {
+        chatData.name = newName;
+        localStorage.setItem(chatKey, JSON.stringify(chatData));
+        updateChatList();
+    }
+}
+
+function loadChat(chatId) {
+    currentChatId = chatId;
+    localStorage.setItem('currentChatId', chatId);
+    clearChatArea();
+    const chatData = JSON.parse(localStorage.getItem(`chat_${chatId}`) || '{"messages": []}');
+    chatData.messages.forEach(msg => {
+        appendMessage(msg.content, msg.isAssistant, false);
+    });
+    updateChatList();
+}
+
+function clearChatArea() {
+    chatArea.innerHTML = `
+        <div class="welcome-message" id="welcomeMessage">
+            <div class="welcome-card">
+                <div class="welcome-icon">🤖</div>
+                <div class="welcome-status">
+                    <span class="status-dot"></span>
+                    AI 助手已就绪
+                </div>
+                <p class="welcome-text">开始新的对话吧！</p>
+            </div>
+        </div>
+    `;
+}
+
+function appendMessage(content, isAssistant = false, saveToStorage = true) {
+    const welcomeEl = document.getElementById('welcomeMessage');
+    if (welcomeEl) welcomeEl.style.display = 'none';
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isAssistant ? 'assistant' : 'user'} markdown-body`;
+
+    const renderedContent = DOMPurify.sanitize(marked.parse(content));
+    messageDiv.innerHTML = renderedContent;
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.textContent = '复制';
+    copyBtn.onclick = () => {
+        navigator.clipboard.writeText(content).then(() => {
+            copyBtn.textContent = '已复制';
+            setTimeout(() => copyBtn.textContent = '复制', 2000);
+        });
+    };
+    messageDiv.appendChild(copyBtn);
+
+    chatArea.appendChild(messageDiv);
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    if (saveToStorage && currentChatId) {
+        const chatData = JSON.parse(localStorage.getItem(`chat_${currentChatId}`) || '{"name": "新对话", "messages": []}');
+        chatData.messages.push({ content, isAssistant });
+        localStorage.setItem(`chat_${currentChatId}`, JSON.stringify(chatData));
+    }
+}
+
+function startEventStream(message) {
+    if (currentEventSource) {
+        currentEventSource.close();
+    }
+
+    const ragTag = document.getElementById('ragSelect').value;
+    const aiModelSelect = document.getElementById('aiModel');
+    const aiModelValue = aiModelSelect.value;
+    const aiModelModel = aiModelSelect.options[aiModelSelect.selectedIndex].getAttribute('model');
+
+    let url;
+    if (ragTag) {
+        url = `http://localhost:8090/api/v1/${aiModelValue}/generate_stream_rag?message=${encodeURIComponent(message)}&ragTag=${encodeURIComponent(ragTag)}&model=${encodeURIComponent(aiModelModel)}`;
+    } else {
+        url = `http://localhost:8090/api/v1/${aiModelValue}/generate_stream?message=${encodeURIComponent(message)}&model=${encodeURIComponent(aiModelModel)}`;
+    }
+
+    currentEventSource = new EventSource(url);
+    let accumulatedContent = '';
+    let tempMessageDiv = null;
+
+    currentEventSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+
+            if (data.result?.output?.content) {
+                const newContent = data.result.output.content;
+                accumulatedContent += newContent;
+
+                if (!tempMessageDiv) {
+                    const welcomeEl = document.getElementById('welcomeMessage');
+                    if (welcomeEl) welcomeEl.style.display = 'none';
+                    
+                    tempMessageDiv = document.createElement('div');
+                    tempMessageDiv.className = 'message assistant markdown-body';
+                    chatArea.appendChild(tempMessageDiv);
+                }
+
+                tempMessageDiv.textContent = accumulatedContent;
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }
+
+            if (data.result?.output?.properties?.finishReason === 'STOP') {
+                currentEventSource.close();
+
+                const finalContent = accumulatedContent;
+                tempMessageDiv.innerHTML = DOMPurify.sanitize(marked.parse(finalContent));
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-btn';
+                copyBtn.textContent = '复制';
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(finalContent).then(() => {
+                        copyBtn.textContent = '已复制';
+                        setTimeout(() => copyBtn.textContent = '复制', 2000);
+                    });
+                };
+                tempMessageDiv.appendChild(copyBtn);
+
+                if (currentChatId) {
+                    const chatData = JSON.parse(localStorage.getItem(`chat_${currentChatId}`) || '{"name": "新对话", "messages": []}');
+                    chatData.messages.push({ content: finalContent, isAssistant: true });
+                    localStorage.setItem(`chat_${currentChatId}`, JSON.stringify(chatData));
+                }
+            }
+        } catch (e) {
+            console.error('Error parsing event data:', e);
+        }
+    };
+
+    currentEventSource.onerror = function(error) {
+        console.error('EventSource error:', error);
+        currentEventSource.close();
+    };
+}
+
+submitBtn.addEventListener('click', () => {
+    const message = messageInput.value.trim();
+    if (!message) return;
+
+    if (!currentChatId) {
+        createNewChat();
+    }
+
+    appendMessage(message, false);
+    messageInput.value = '';
+    startEventStream(message);
+});
+
+messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitBtn.click();
+    }
+});
+
+newChatBtn.addEventListener('click', createNewChat);
+
+toggleSidebarBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+});
+
+// Initialize
+updateChatList();
+const savedChatId = localStorage.getItem('currentChatId');
+if (savedChatId && localStorage.getItem(`chat_${savedChatId}`)) {
+    loadChat(savedChatId);
+}
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+        sidebar.classList.remove('collapsed');
+    }
+});
+
+if (window.innerWidth <= 768) {
+    sidebar.classList.add('collapsed');
+}
+</script>
 </body>
 </html>

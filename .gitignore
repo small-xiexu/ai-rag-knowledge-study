@@ -39,3 +39,7 @@ build/
 *.log
 **/data/log/
 **/logs/
+
+### Temp ###
+git-cloned-repo/
+xfg-dev-tech-app/cloned-repo/
