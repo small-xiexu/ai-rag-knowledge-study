@@ -1,7 +1,6 @@
 package com.xbk.xfg.dev.tech.trigger.http;
 
 import com.xbk.xfg.dev.tech.api.IAiService;
-import com.xbk.xfg.dev.tech.api.dto.OllamaRequest;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
