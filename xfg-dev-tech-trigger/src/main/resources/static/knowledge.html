@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识库列表 - RAG 系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .knowledge-item {
+            animation: slideIn 0.3s ease-out;
+            transition: all 0.2s ease;
+        }
+
+        .knowledge-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .empty-state {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .refresh-btn {
+            transition: all 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            transform: rotate(180deg);
+        }
+
+        .knowledge-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .knowledge-list::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .knowledge-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .knowledge-list::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .nav-link {
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <div class="glass-card rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <!-- 头部 -->
+        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-8 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">知识库列表</h1>
+                        <p class="text-white/80 text-sm mt-1">管理您的 RAG 知识库</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="upload.html" class="nav-link flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors backdrop-blur" title="上传知识库">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        <span class="text-white font-medium text-sm">上传</span>
+                    </a>
+                    <a href="ai-chat.html" class="nav-link flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors backdrop-blur" title="返回聊天">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                        <span class="text-white font-medium text-sm">聊天</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 内容区域 -->
+        <div class="p-8">
+            <!-- 标题栏 -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                    <span class="text-sm font-semibold text-gray-700">已创建的知识库</span>
+                    <span id="countBadge" class="hidden px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-600 rounded-full"></span>
+                </div>
+                <button id="refreshBtn" onclick="loadKnowledgeList()" class="refresh-btn p-2 hover:bg-gray-100 rounded-lg" title="刷新列表">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- 知识库列表 -->
+            <div id="knowledgeList" class="knowledge-list space-y-3 max-h-96 overflow-y-auto pr-2">
+                <!-- 加载状态 -->
+                <div id="loadingState" class="flex flex-col items-center justify-center py-16">
+                    <svg class="loading-spinner w-10 h-10 text-indigo-500 mb-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-gray-500 text-sm">加载中...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部 -->
+        <div class="px-8 py-4 bg-gray-50 border-t border-gray-100">
+            <p class="text-center text-xs text-gray-500">
+                知识库用于 RAG 检索增强，让 AI 更精准地回答您的问题
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8090/api/v1/rag/query_rag_tag_list';
+
+        // 加载知识库列表
+        async function loadKnowledgeList() {
+            const listContainer = document.getElementById('knowledgeList');
+            const loadingState = document.getElementById('loadingState');
+            const countBadge = document.getElementById('countBadge');
+
+            // 显示加载状态
+            listContainer.innerHTML = `
+                <div id="loadingState" class="flex flex-col items-center justify-center py-16">
+                    <svg class="loading-spinner w-10 h-10 text-indigo-500 mb-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-gray-500 text-sm">加载中...</p>
+                </div>
+            `;
+            countBadge.classList.add('hidden');
+
+            try {
+                const response = await fetch(API_URL);
+                const result = await response.json();
+
+                if (result.code === '0000' && result.data) {
+                    const tags = result.data;
+
+                    if (tags.length === 0) {
+                        renderEmptyState();
+                    } else {
+                        renderKnowledgeList(tags);
+                        countBadge.textContent = tags.length;
+                        countBadge.classList.remove('hidden');
+                    }
+                } else {
+                    renderErrorState(result.info || '获取知识库列表失败');
+                }
+            } catch (error) {
+                console.error('请求错误:', error);
+                renderErrorState('网络错误，请检查服务器连接');
+            }
+        }
+
+        // 渲染知识库列表
+        function renderKnowledgeList(tags) {
+            const listContainer = document.getElementById('knowledgeList');
+            
+            listContainer.innerHTML = tags.map((tag, index) => `
+                <div class="knowledge-item flex items-center justify-between p-4 bg-white rounded-xl border border-gray-100" style="animation-delay: ${index * 0.05}s">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-800">${escapeHtml(tag)}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">知识库</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-600 rounded-full">已就绪</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 渲染空状态
+        function renderEmptyState() {
+            const listContainer = document.getElementById('knowledgeList');
+            listContainer.innerHTML = `
+                <div class="empty-state flex flex-col items-center justify-center py-16">
+                    <div class="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mb-6">
+                        <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">暂无知识库</h3>
+                    <p class="text-gray-500 text-sm mb-6">上传文件创建您的第一个知识库</p>
+                    <a href="upload.html" class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-sm font-medium rounded-xl transition-all shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        创建知识库
+                    </a>
+                </div>
+            `;
+        }
+
+        // 渲染错误状态
+        function renderErrorState(message) {
+            const listContainer = document.getElementById('knowledgeList');
+            listContainer.innerHTML = `
+                <div class="empty-state flex flex-col items-center justify-center py-16">
+                    <div class="w-20 h-20 bg-gradient-to-br from-red-100 to-red-200 rounded-2xl flex items-center justify-center mb-6">
+                        <svg class="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">加载失败</h3>
+                    <p class="text-gray-500 text-sm mb-6">${escapeHtml(message)}</p>
+                    <button onclick="loadKnowledgeList()" class="flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-xl transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        重试
+                    </button>
+                </div>
+            `;
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 页面加载时获取列表
+        document.addEventListener('DOMContentLoaded', loadKnowledgeList);
+    </script>
+</body>
+</html>

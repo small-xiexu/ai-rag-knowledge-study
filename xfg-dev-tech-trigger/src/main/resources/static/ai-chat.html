@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat</title>
+    <!-- Favicon - ChatGPT 风格图标 -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2310a37f'/%3E%3Cstop offset='100%25' stop-color='%231a7f64'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='url(%23g)'/%3E%3Cpath d='M50 25 L50 50 L70 60' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='50' cy='50' r='8' fill='white'/%3E%3Ccircle cx='30' cy='40' r='5' fill='white' opacity='0.7'/%3E%3Ccircle cx='70' cy='40' r='5' fill='white' opacity='0.7'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        * { font-family: 'Inter', system-ui, sans-serif; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 2px; }
+        .message-enter { animation: messageEnter 0.2s ease-out; }
+        @keyframes messageEnter {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 h-screen overflow-hidden">
+    <div class="flex h-full">
+        <!-- 侧边栏 -->
+        <aside id="sidebar" class="w-56 bg-white border-r border-gray-100 flex flex-col">
+            <!-- Logo -->
+            <div class="h-12 px-4 flex items-center border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <span class="font-medium text-sm text-gray-800">AI Chat</span>
+                </div>
+            </div>
+            
+            <!-- 新建按钮 -->
+            <div class="p-3">
+                <button onclick="createNewChat()" class="w-full h-8 bg-gray-900 hover:bg-gray-800 text-white text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-1.5">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    新建对话
+                </button>
+            </div>
+            
+            <!-- 聊天列表 -->
+            <div class="flex-1 overflow-y-auto px-2" id="chatList"></div>
+            
+            <!-- 底部 -->
+            <div class="p-3 border-t border-gray-100 space-y-2">
+                <!-- 知识库入口 -->
+                <a href="knowledge.html" class="w-full h-8 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1.5 shadow-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
+                    管理知识库
+                </a>
+                <!-- 知识库选择器 -->
+                <div class="space-y-1">
+                    <label class="text-xs text-gray-500 px-1">RAG 知识库</label>
+                    <select id="ragTagSelect" class="w-full h-7 px-2 text-xs bg-purple-50 border border-purple-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-purple-700">
+                        <option value="">不使用知识库</option>
+                    </select>
+                </div>
+                <!-- 模型选择器 -->
+                <div class="space-y-1">
+                    <label class="text-xs text-gray-500 px-1">AI 模型</label>
+                    <select id="modelSelect" class="w-full h-7 px-2 text-xs bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="deepseek-r1:1.5b">DeepSeek R1 1.5B</option>
+                        <option value="llama3:8b">Llama3 8B</option>
+                        <option value="qwen:7b">Qwen 7B</option>
+                    </select>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主区域 -->
+        <main class="flex-1 flex flex-col bg-white">
+            <!-- 头部 -->
+            <header class="h-16 px-6 flex items-center justify-between border-b border-gray-100">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="w-9 h-9 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <h1 id="currentChatTitle" class="text-base font-medium text-gray-800">新对话</h1>
+                </div>
+            </header>
+
+            <!-- 消息区域 -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto">
+                <!-- 欢迎页 -->
+                <div id="welcomeMessage" class="h-full flex flex-col items-center justify-center px-4">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-6">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-2">你好，有什么可以帮你？</h2>
+                    <p class="text-gray-500 text-sm">选择左侧模型，开始与 AI 对话</p>
+                </div>
+            </div>
+
+            <!-- 输入区域 -->
+            <div class="px-4 py-3 border-t border-gray-100">
+                <div class="flex gap-2 items-end">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="输入消息..." 
+                        rows="1"
+                        class="flex-1 min-h-[36px] max-h-24 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all text-sm"
+                        onkeydown="handleKeyDown(event)"
+                        oninput="autoResize(this)"
+                    ></textarea>
+                    <button 
+                        id="sendButton"
+                        onclick="sendMessage()" 
+                        class="w-9 h-9 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white rounded-lg transition-colors flex items-center justify-center flex-shrink-0"
+                    >
+                        <svg id="sendIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                        <svg id="loadingIcon" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div id="contextMenu" class="hidden fixed bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
+        <button onclick="renameChat()" class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-sm text-gray-700">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            重命名
+        </button>
+        <button onclick="deleteChat()" class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-sm text-red-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            删除
+        </button>
+    </div>
+
+    <script>
+        let chats = [];
+        let currentChatId = null;
+        let isGenerating = false;
+        let currentEventSource = null;
+        let contextMenuChatId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedChats = localStorage.getItem('ai-chats-v2');
+            if (savedChats) {
+                chats = JSON.parse(savedChats);
+                renderChatList();
+                if (chats.length > 0) selectChat(chats[0].id);
+            }
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#contextMenu')) hideContextMenu();
+            });
+            // 加载知识库列表
+            loadRagTagList();
+        });
+
+        // 加载知识库列表填充下拉框
+        async function loadRagTagList() {
+            try {
+                const response = await fetch('/api/v1/rag/query_rag_tag_list');
+                const result = await response.json();
+                if (result.code === '0000' && result.data) {
+                    const select = document.getElementById('ragTagSelect');
+                    result.data.forEach(tag => {
+                        const option = document.createElement('option');
+                        option.value = tag;
+                        option.textContent = tag;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (e) { console.error('加载知识库列表失败:', e); }
+        }
+
+        function createNewChat() {
+            const chat = { id: Date.now().toString(), title: '新对话', messages: [], createdAt: new Date().toISOString() };
+            chats.unshift(chat);
+            saveChats();
+            renderChatList();
+            selectChat(chat.id);
+        }
+
+        function selectChat(chatId) {
+            currentChatId = chatId;
+            renderChatList();
+            renderMessages();
+            const chat = chats.find(c => c.id === chatId);
+            if (chat) document.getElementById('currentChatTitle').textContent = chat.title;
+        }
+
+        function deleteChat() {
+            hideContextMenu();
+            if (!contextMenuChatId || !confirm('确定删除？')) return;
+            chats = chats.filter(c => c.id !== contextMenuChatId);
+            saveChats();
+            renderChatList();
+            if (currentChatId === contextMenuChatId) {
+                currentChatId = chats.length > 0 ? chats[0].id : null;
+                currentChatId ? selectChat(currentChatId) : renderMessages();
+            }
+        }
+
+        function renameChat() {
+            hideContextMenu();
+            if (!contextMenuChatId) return;
+            const chat = chats.find(c => c.id === contextMenuChatId);
+            if (!chat) return;
+            const newTitle = prompt('输入新名称:', chat.title);
+            if (newTitle?.trim()) {
+                chat.title = newTitle.trim();
+                saveChats();
+                renderChatList();
+                if (currentChatId === contextMenuChatId) document.getElementById('currentChatTitle').textContent = chat.title;
+            }
+        }
+
+        function showContextMenu(e, chatId) {
+            e.preventDefault();
+            e.stopPropagation();
+            contextMenuChatId = chatId;
+            const menu = document.getElementById('contextMenu');
+            menu.classList.remove('hidden');
+            menu.style.left = e.pageX + 'px';
+            menu.style.top = e.pageY + 'px';
+        }
+
+        function hideContextMenu() {
+            document.getElementById('contextMenu').classList.add('hidden');
+            contextMenuChatId = null;
+        }
+
+        function saveChats() { localStorage.setItem('ai-chats-v2', JSON.stringify(chats)); }
+
+        function renderChatList() {
+            const container = document.getElementById('chatList');
+            container.innerHTML = chats.map(chat => `
+                <div class="group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer mb-0.5 transition-colors ${chat.id === currentChatId ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}"
+                    onclick="selectChat('${chat.id}')">
+                    <span class="truncate flex-1 text-sm">${escapeHtml(chat.title)}</span>
+                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button class="p-1 hover:bg-gray-200 rounded transition-colors" title="重命名"
+                            onclick="event.stopPropagation(); renameChatById('${chat.id}')">
+                            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </button>
+                        <button class="p-1 hover:bg-red-100 rounded transition-colors" title="删除"
+                            onclick="event.stopPropagation(); deleteChatById('${chat.id}')">
+                            <svg class="w-3 h-3 text-gray-400 hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renameChatById(chatId) {
+            const chat = chats.find(c => c.id === chatId);
+            if (!chat) return;
+            const newTitle = prompt('输入新名称:', chat.title);
+            if (newTitle?.trim()) {
+                chat.title = newTitle.trim();
+                saveChats();
+                renderChatList();
+                if (currentChatId === chatId) document.getElementById('currentChatTitle').textContent = chat.title;
+            }
+        }
+
+        function deleteChatById(chatId) {
+            if (!confirm('确定删除？')) return;
+            chats = chats.filter(c => c.id !== chatId);
+            saveChats();
+            renderChatList();
+            if (currentChatId === chatId) {
+                currentChatId = chats.length > 0 ? chats[0].id : null;
+                currentChatId ? selectChat(currentChatId) : renderMessages();
+            }
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('messagesContainer');
+            const chat = chats.find(c => c.id === currentChatId);
+            
+            if (!chat || chat.messages.length === 0) {
+                container.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center px-4">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-6">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-semibold text-gray-800 mb-2">你好，有什么可以帮你？</h2>
+                        <p class="text-gray-500 text-sm">选择左侧模型，开始与 AI 对话</p>
+                    </div>`;
+                return;
+            }
+            
+            container.innerHTML = `<div class="py-6 px-6 space-y-4">` + 
+                chat.messages.map((msg, i) => `
+                    <div class="message-enter flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}">
+                        <div class="${msg.role === 'user' 
+                            ? 'bg-blue-500 text-white rounded-2xl rounded-br-md px-4 py-3 max-w-[70%]' 
+                            : 'bg-gray-100 text-gray-800 rounded-2xl rounded-bl-md px-4 py-3 max-w-[70%]'}">
+                            <p class="text-sm leading-relaxed whitespace-pre-wrap" id="msg-${i}">${escapeHtml(msg.content)}</p>
+                        </div>
+                    </div>
+                `).join('') + `</div>`;
+            scrollToBottom();
+        }
+
+        function addMessage(role, content) {
+            const chat = chats.find(c => c.id === currentChatId);
+            if (!chat) return;
+            chat.messages.push({ role, content, timestamp: new Date().toISOString() });
+            if (chat.messages.length === 1 && role === 'user') {
+                chat.title = content.slice(0, 20) + (content.length > 20 ? '...' : '');
+                document.getElementById('currentChatTitle').textContent = chat.title;
+                renderChatList();
+            }
+            saveChats();
+        }
+
+        function updateLastAIMessage(content) {
+            const chat = chats.find(c => c.id === currentChatId);
+            if (!chat) return;
+            const lastMsg = chat.messages[chat.messages.length - 1];
+            if (lastMsg?.role === 'assistant') {
+                lastMsg.content = content;
+                saveChats();
+                const msgEl = document.getElementById(`msg-${chat.messages.length - 1}`);
+                if (msgEl) msgEl.textContent = content;
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message || isGenerating) return;
+            if (!currentChatId) createNewChat();
+            addMessage('user', message);
+            renderMessages();
+            input.value = '';
+            autoResize(input);
+            addMessage('assistant', '');
+            renderMessages();
+            startStreamRequest(message);
+        }
+
+        function startStreamRequest(message) {
+            isGenerating = true;
+            updateSendButton();
+            const model = document.getElementById('modelSelect').value;
+            const ragTag = document.getElementById('ragTagSelect').value;
+            
+            // 根据是否选择知识库决定调用哪个 API
+            let apiUrl;
+            if (ragTag) {
+                // RAG 模式：使用知识库检索增强
+                apiUrl = `/api/v1/rag/generate_stream_rag?model=${encodeURIComponent(model)}&ragTag=${encodeURIComponent(ragTag)}&message=${encodeURIComponent(message)}`;
+            } else {
+                // 普通模式：直接对话
+                apiUrl = `/api/v1/ollama/generate_stream?model=${encodeURIComponent(model)}&message=${encodeURIComponent(message)}`;
+            }
+            
+            let fullContent = '';
+            currentEventSource = new EventSource(apiUrl);
+            
+            currentEventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.result?.output?.content) {
+                        fullContent += data.result.output.content;
+                        updateLastAIMessage(filterContent(fullContent));
+                        scrollToBottom();
+                    }
+                    if (data.result?.metadata?.finishReason === 'STOP') {
+                        updateLastAIMessage(filterContent(fullContent).trim());
+                        stopGeneration();
+                    }
+                } catch (e) { console.error('Parse error:', e); }
+            };
+            
+            currentEventSource.onerror = function() {
+                stopGeneration();
+                if (!fullContent) updateLastAIMessage('请求出错，请重试');
+            };
+        }
+
+        function filterContent(text) {
+            let f = text.replace(/<think>[\s\S]*?<\/think>/g, '');
+            const ts = f.indexOf('<think>');
+            if (ts !== -1 && f.indexOf('</think>', ts) === -1) f = f.substring(0, ts);
+            f = f.replace(/<\/?think>/g, '');
+            f = f.replace(/\*\*([^*]+)\*\*/g, '$1');
+            f = f.replace(/__([^_]+)__/g, '$1');
+            f = f.replace(/(?<![0-9])\*([^*\n]+)\*(?![0-9])/g, '$1');
+            f = f.replace(/`([^`]+)`/g, '$1');
+            f = f.replace(/^#{1,6}\s+/gm, '');
+            return f.replace(/^\s*\n+/, '');
+        }
+
+        function stopGeneration() {
+            if (currentEventSource) { currentEventSource.close(); currentEventSource = null; }
+            isGenerating = false;
+            updateSendButton();
+        }
+
+        function updateSendButton() {
+            const btn = document.getElementById('sendButton');
+            btn.disabled = isGenerating;
+            document.getElementById('sendIcon').classList.toggle('hidden', isGenerating);
+            document.getElementById('loadingIcon').classList.toggle('hidden', !isGenerating);
+        }
+
+        function handleKeyDown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+        function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 128) + 'px'; }
+        function scrollToBottom() { const c = document.getElementById('messagesContainer'); c.scrollTop = c.scrollHeight; }
+        function toggleSidebar() { const s = document.getElementById('sidebar'); s.classList.toggle('hidden'); }
+        function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+    </script>
+</body>
+</html>

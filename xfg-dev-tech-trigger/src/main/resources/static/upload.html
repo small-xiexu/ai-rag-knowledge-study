@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识库上传 - RAG 系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* 背景渐变 */
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        /* 毛玻璃效果 */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* 拖拽区域动画 */
+        .drop-zone {
+            border: 2px dashed #d1d5db;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+            transform: scale(1.01);
+        }
+
+        .drop-zone.drag-over {
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
+        }
+
+        /* 文件图标动画 */
+        .file-icon {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        /* 文件项淡入动画 */
+        .file-item {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* 提交按钮 */
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 输入框focus效果 */
+        .input-field {
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+
+        /* 成功提示动画 */
+        .success-toast {
+            animation: toastIn 0.5s ease-out;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 进度条动画 */
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+
+        /* 滚动条 */
+        .file-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .file-list::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .file-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .file-list::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* 文件类型标签 */
+        .file-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-md { background: #dbeafe; color: #1d4ed8; }
+        .badge-txt { background: #dcfce7; color: #15803d; }
+        .badge-text { background: #dcfce7; color: #15803d; }
+        .badge-sql { background: #fef3c7; color: #b45309; }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <!-- Toast 提示 -->
+    <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 hidden">
+        <div class="success-toast flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl text-white font-medium">
+            <span id="toastIcon"></span>
+            <span id="toastMessage"></span>
+        </div>
+    </div>
+
+    <!-- 主卡片 -->
+    <div class="glass-card rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <!-- 头部 -->
+        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-8 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">知识库上传</h1>
+                        <p class="text-white/80 text-sm mt-1">上传文件构建您的 RAG 知识库</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="knowledge.html" class="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors backdrop-blur" title="知识库列表">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                        <span class="text-white font-medium text-sm">列表</span>
+                    </a>
+                    <a href="ai-chat.html" class="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors backdrop-blur" title="返回聊天">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                        <span class="text-white font-medium text-sm">聊天</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 内容区域 -->
+        <div class="p-8 space-y-6">
+            <!-- 知识库名称输入 -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                        </svg>
+                        知识库名称
+                    </span>
+                </label>
+                <input 
+                    type="text" 
+                    id="ragTagInput"
+                    class="input-field w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-gray-700 placeholder-gray-400"
+                    placeholder="输入知识库标签名称，例如：产品手册、技术文档"
+                >
+            </div>
+
+            <!-- 文件上传区域 -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        上传文件
+                    </span>
+                </label>
+
+                <!-- 拖拽上传区域 -->
+                <div 
+                    id="dropZone" 
+                    class="drop-zone rounded-2xl p-8 text-center cursor-pointer"
+                    onclick="document.getElementById('fileInput').click()"
+                >
+                    <input 
+                        type="file" 
+                        id="fileInput" 
+                        multiple 
+                        accept=".md,.txt,.text,.sql"
+                        class="hidden"
+                    >
+                    <div class="file-icon mb-4">
+                        <svg class="w-16 h-16 mx-auto text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 font-medium mb-2">拖拽文件到这里，或点击选择</p>
+                    <p class="text-gray-400 text-sm">支持 <span class="font-mono text-indigo-500">.md</span> <span class="font-mono text-green-500">.txt</span> <span class="font-mono text-green-500">.text</span> <span class="font-mono text-amber-500">.sql</span> 格式</p>
+                </div>
+
+                <!-- 文件列表 -->
+                <div id="fileListContainer" class="mt-4 hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-medium text-gray-600">已选择文件</span>
+                        <button 
+                            id="clearAllBtn"
+                            class="text-xs text-red-500 hover:text-red-600 font-medium transition-colors"
+                        >
+                            清空全部
+                        </button>
+                    </div>
+                    <div id="fileList" class="file-list space-y-2 max-h-48 overflow-y-auto pr-2"></div>
+                </div>
+            </div>
+
+            <!-- 上传进度 -->
+            <div id="progressContainer" class="hidden">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-600">上传进度</span>
+                    <span id="progressText" class="text-sm text-indigo-600 font-medium">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                    <div id="progressBar" class="progress-bar bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- 提交按钮 -->
+            <button 
+                id="submitBtn" 
+                class="submit-btn w-full py-4 rounded-xl text-white font-semibold text-lg flex items-center justify-center gap-2"
+                disabled
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                <span>上传到知识库</span>
+            </button>
+        </div>
+
+        <!-- 底部提示 -->
+        <div class="px-8 py-4 bg-gray-50 border-t border-gray-100">
+            <p class="text-center text-xs text-gray-500">
+                文件将被解析、切块、向量化后存入数据库，用于 RAG 检索增强
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // API 配置
+        const API_URL = 'http://localhost:8090/api/v1/rag/file/upload';
+
+        // DOM 元素
+        const ragTagInput = document.getElementById('ragTagInput');
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const fileListContainer = document.getElementById('fileListContainer');
+        const fileList = document.getElementById('fileList');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const toast = document.getElementById('toast');
+        const toastIcon = document.getElementById('toastIcon');
+        const toastMessage = document.getElementById('toastMessage');
+
+        // 存储选中的文件
+        let selectedFiles = [];
+
+        // 允许的文件类型
+        const allowedTypes = ['md', 'txt', 'text', 'sql'];
+
+        // 显示 Toast
+        function showToast(message, isSuccess = true) {
+            const bgColor = isSuccess ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-red-500 to-rose-500';
+            toast.querySelector('div').className = `success-toast flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl text-white font-medium ${bgColor}`;
+            toastIcon.innerHTML = isSuccess 
+                ? '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+                : '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+            toastMessage.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // 获取文件扩展名
+        function getFileExtension(filename) {
+            return filename.split('.').pop().toLowerCase();
+        }
+
+        // 获取文件大小显示
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // 获取文件类型徽章
+        function getFileBadge(ext) {
+            const badges = {
+                'md': 'badge-md',
+                'txt': 'badge-txt',
+                'text': 'badge-text',
+                'sql': 'badge-sql'
+            };
+            return badges[ext] || 'badge-txt';
+        }
+
+        // 更新文件列表显示
+        function updateFileList() {
+            if (selectedFiles.length === 0) {
+                fileListContainer.classList.add('hidden');
+                return;
+            }
+
+            fileListContainer.classList.remove('hidden');
+            fileList.innerHTML = '';
+
+            selectedFiles.forEach((file, index) => {
+                const ext = getFileExtension(file.name);
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors';
+                fileItem.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-gray-700 truncate">${file.name}</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="file-badge ${getFileBadge(ext)}">${ext}</span>
+                                <span class="text-xs text-gray-400">${formatFileSize(file.size)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="p-2 hover:bg-red-50 rounded-lg transition-colors group" onclick="removeFile(${index})">
+                        <svg class="w-4 h-4 text-gray-400 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                `;
+                fileList.appendChild(fileItem);
+            });
+
+            updateSubmitButton();
+        }
+
+        // 移除文件
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+        }
+
+        // 清空所有文件
+        function clearAllFiles() {
+            selectedFiles = [];
+            fileInput.value = '';
+            updateFileList();
+        }
+
+        // 添加文件
+        function addFiles(files) {
+            const validFiles = Array.from(files).filter(file => {
+                const ext = getFileExtension(file.name);
+                if (!allowedTypes.includes(ext)) {
+                    showToast(`不支持的文件类型: ${file.name}`, false);
+                    return false;
+                }
+                // 检查是否已存在同名文件
+                if (selectedFiles.some(f => f.name === file.name)) {
+                    showToast(`文件已存在: ${file.name}`, false);
+                    return false;
+                }
+                return true;
+            });
+
+            selectedFiles = [...selectedFiles, ...validFiles];
+            updateFileList();
+        }
+
+        // 更新提交按钮状态
+        function updateSubmitButton() {
+            const hasTag = ragTagInput.value.trim() !== '';
+            const hasFiles = selectedFiles.length > 0;
+            submitBtn.disabled = !(hasTag && hasFiles);
+        }
+
+        // 拖拽事件处理
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            addFiles(e.dataTransfer.files);
+        });
+
+        // 文件选择事件
+        fileInput.addEventListener('change', (e) => {
+            addFiles(e.target.files);
+        });
+
+        // 知识库名称输入事件
+        ragTagInput.addEventListener('input', updateSubmitButton);
+
+        // 清空全部按钮
+        clearAllBtn.addEventListener('click', clearAllFiles);
+
+        // 提交上传
+        submitBtn.addEventListener('click', async () => {
+            const ragTag = ragTagInput.value.trim();
+            if (!ragTag || selectedFiles.length === 0) return;
+
+            // 显示进度条
+            progressContainer.classList.remove('hidden');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>上传中...</span>
+            `;
+
+            // 构建 FormData
+            const formData = new FormData();
+            formData.append('ragTag', ragTag);
+            selectedFiles.forEach(file => {
+                formData.append('file', file);
+            });
+
+            try {
+                // 模拟进度（真实进度需要后端支持）
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 10;
+                    if (progress > 90) progress = 90;
+                    progressBar.style.width = progress + '%';
+                    progressText.textContent = Math.round(progress) + '%';
+                }, 200);
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                progressText.textContent = '100%';
+
+                const result = await response.json();
+
+                if (result.code === '0000') {
+                    showToast('文件上传成功！知识库已更新', true);
+                    // 清空表单
+                    setTimeout(() => {
+                        ragTagInput.value = '';
+                        clearAllFiles();
+                        progressContainer.classList.add('hidden');
+                        progressBar.style.width = '0%';
+                        progressText.textContent = '0%';
+                    }, 1000);
+                } else {
+                    showToast(result.info || '上传失败，请重试', false);
+                }
+            } catch (error) {
+                console.error('上传错误:', error);
+                showToast('网络错误，请检查服务器连接', false);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <span>上传到知识库</span>
+                `;
+                updateSubmitButton();
+            }
+        });
+    </script>
+</body>
+</html>
