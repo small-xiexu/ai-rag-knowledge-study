@@ -23,26 +23,22 @@ public class OllamaController implements IAiService {
 
     /**
      * 同步生成接口
-     * POST http://localhost:8090/api/v1/ollama/generate
-     * Content-Type: application/json
-     * {"model":"deepseek-r1:1.5b","message":"1+1"}
+     * GET http://localhost:8090/api/v1/ollama/generate?model=deepseek-r1:1.5b&message=1+1
      */
-    @PostMapping("generate")
     @Override
-    public ChatResponse generate(@RequestBody OllamaRequest request) {
-        return chatClient.call(new Prompt(request.getMessage(), OllamaOptions.create().withModel(request.getModel())));
+    @GetMapping("generate")
+    public ChatResponse generate(@RequestParam String model, @RequestParam String message) {
+        return chatClient.call(new Prompt(message, OllamaOptions.create().withModel(model)));
     }
 
     /**
      * 流式生成接口
-     * POST http://localhost:8090/api/v1/ollama/generate_stream
-     * Content-Type: application/json
-     * {"model":"deepseek-r1:1.5b","message":"hi"}
+     * GET http://localhost:8090/api/v1/ollama/generate_stream?model=deepseek-r1:1.5b&message=hi
      */
-    @PostMapping("generate_stream")
     @Override
-    public Flux<ChatResponse> generateStream(@RequestBody OllamaRequest request) {
-        return chatClient.stream(new Prompt(request.getMessage(), OllamaOptions.create().withModel(request.getModel())));
+    @GetMapping(value = "generate_stream", produces = "text/event-stream")
+    public Flux<ChatResponse> generateStream(@RequestParam String model, @RequestParam String message) {
+        return chatClient.stream(new Prompt(message, OllamaOptions.create().withModel(model)));
     }
 
 }

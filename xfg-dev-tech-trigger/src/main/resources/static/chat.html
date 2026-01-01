@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 智能对话</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        body {
+            background-color: #ffffff;
+        }
+        
+        .message-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .typing-indicator span {
+            width: 6px;
+            height: 6px;
+            background: #9ca3af;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* 输入框样式 */
+        .input-container {
+            border: 1px solid #e5e7eb;
+            border-radius: 24px;
+            transition: all 0.2s ease;
+            background: #ffffff;
+        }
+        
+        .input-container:focus-within {
+            border-color: #d1d5db;
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .input-container:hover {
+            border-color: #d1d5db;
+        }
+        
+        /* 提交按钮 */
+        .submit-btn {
+            transition: all 0.15s ease;
+        }
+        
+        .submit-btn:hover:not(:disabled) {
+            background-color: #1f2937;
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* 滚动条 */
+        .chat-area::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .chat-area::-webkit-scrollbar-thumb {
+            background: #e5e7eb;
+            border-radius: 3px;
+        }
+        
+        .chat-area::-webkit-scrollbar-thumb:hover {
+            background: #d1d5db;
+        }
+        
+        /* AI消息气泡 */
+        .ai-bubble {
+            background: #f3f4f6;
+            border-radius: 18px;
+        }
+        
+        /* 用户消息气泡 */
+        .user-bubble {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col bg-white">
+    <!-- 顶部导航栏 -->
+    <header class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div class="flex items-center gap-2">
+            <button id="newChatBtn" class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors" title="新建聊天">
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span class="text-sm font-medium text-gray-700">新聊天</span>
+            </button>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <select id="modelSelect" class="text-sm text-gray-600 bg-transparent border border-gray-200 rounded-lg px-3 py-1.5 outline-none hover:border-gray-300 cursor-pointer">
+                <option value="deepseek-r1:1.5b">deepseek-r1:1.5b</option>
+                <option value="deepseek-r1:7b">deepseek-r1:7b</option>
+                <option value="qwen:7b">qwen:7b</option>
+            </select>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- 聊天区域 -->
+    <main id="chatArea" class="chat-area flex-1 overflow-y-auto">
+        <div class="max-w-3xl mx-auto px-4 py-8">
+            <!-- 欢迎界面（初始状态） -->
+            <div id="welcomeSection" class="flex flex-col items-center justify-center min-h-[60vh]">
+                <div class="ai-bubble px-5 py-3 mb-6">
+                    <p class="text-gray-700 text-base flex items-center gap-2">
+                        <span>👋</span>
+                        <span>你好！今天我能帮你什么？</span>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- 消息列表 -->
+            <div id="messageList" class="space-y-6 hidden"></div>
+        </div>
+    </main>
+
+    <!-- 底部输入区域 -->
+    <footer class="border-t border-gray-100 bg-white">
+        <div class="max-w-3xl mx-auto px-4 py-4">
+            <div class="input-container flex items-center gap-2 px-4 py-3">
+                <input 
+                    type="text" 
+                    id="messageInput"
+                    class="flex-1 bg-transparent outline-none text-gray-800 text-sm placeholder-gray-400"
+                    placeholder="输入一条消息..."
+                    autocomplete="off"
+                >
+                <div class="flex items-center gap-1">
+                    <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="附件">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                        </svg>
+                    </button>
+                    <button 
+                        id="sendBtn"
+                        class="submit-btn flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded-full text-sm font-medium"
+                    >
+                        <span>↵</span>
+                        <span>提交</span>
+                    </button>
+                </div>
+            </div>
+            <p class="text-center text-xs text-gray-400 mt-3">AI 可能会产生错误，请核实重要信息</p>
+        </div>
+    </footer>
+
+    <script>
+        // API 配置
+        const API_URL = 'http://localhost:8090/api/v1/ollama/generate_stream';
+
+        // DOM 元素
+        const chatArea = document.getElementById('chatArea');
+        const welcomeSection = document.getElementById('welcomeSection');
+        const messageList = document.getElementById('messageList');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const modelSelect = document.getElementById('modelSelect');
+        const newChatBtn = document.getElementById('newChatBtn');
+
+        let isStreaming = false;
+
+        // 新建聊天
+        function startNewChat() {
+            if (isStreaming) return; // 生成中不允许新建
+            messageList.innerHTML = '';
+            messageList.classList.add('hidden');
+            welcomeSection.classList.remove('hidden');
+            messageInput.value = '';
+            messageInput.focus();
+        }
+
+        // 隐藏欢迎界面，显示消息列表
+        function showMessageList() {
+            welcomeSection.classList.add('hidden');
+            messageList.classList.remove('hidden');
+        }
+
+        // 添加用户消息
+        function addUserMessage(content) {
+            showMessageList();
+            const messageHtml = `
+                <div class="message-fade-in flex justify-end">
+                    <div class="user-bubble px-4 py-3 max-w-[85%]">
+                        <p class="text-gray-800 text-sm leading-relaxed">${escapeHtml(content)}</p>
+                    </div>
+                </div>
+            `;
+            messageList.insertAdjacentHTML('beforeend', messageHtml);
+            scrollToBottom();
+        }
+
+        // 添加 AI 消息容器
+        function addAIMessageContainer() {
+            const messageId = 'ai-msg-' + Date.now();
+            const messageHtml = `
+                <div class="message-fade-in" id="${messageId}">
+                    <div class="ai-bubble inline-block px-4 py-3 max-w-[85%]">
+                        <p class="text-gray-800 text-sm leading-relaxed ai-content">
+                            <span class="typing-indicator">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            `;
+            messageList.insertAdjacentHTML('beforeend', messageHtml);
+            scrollToBottom();
+            return messageId;
+        }
+
+        // 更新 AI 消息内容
+        function updateAIMessage(messageId, content) {
+            const messageEl = document.getElementById(messageId);
+            if (messageEl) {
+                const contentEl = messageEl.querySelector('.ai-content');
+                // 简单 Markdown 渲染
+                const htmlContent = renderMarkdown(content);
+                contentEl.innerHTML = htmlContent;
+                scrollToBottom();
+            }
+        }
+
+        // 简单 Markdown 渲染
+        function renderMarkdown(text) {
+            if (!text) return '';
+            return text
+                // 转义 HTML
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                // 粗体 **text**
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                // 斜体 *text*
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                // 行内代码 `code`
+                .replace(/`(.+?)`/g, '<code class="bg-gray-200 px-1 rounded text-sm">$1</code>')
+                // 换行
+                .replace(/\n/g, '<br>');
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 设置按钮状态
+        function setButtonState(disabled) {
+            sendBtn.disabled = disabled;
+            isStreaming = disabled;
+            sendBtn.innerHTML = disabled 
+                ? `<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                   </svg>
+                   <span>生成中</span>`
+                : `<span>↵</span><span>提交</span>`;
+        }
+
+        // 发送消息
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isStreaming) return;
+
+            messageInput.value = '';
+            addUserMessage(message);
+
+            const messageId = addAIMessageContainer();
+            setButtonState(true);
+
+            let fullContent = '';
+            const model = modelSelect.value;
+
+            // 使用 EventSource 发送 GET 请求
+            const url = `${API_URL}?model=${encodeURIComponent(model)}&message=${encodeURIComponent(message)}`;
+            const eventSource = new EventSource(url);
+
+            eventSource.onmessage = function(event) {
+                console.log('Received:', event.data);
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    // 尝试多种路径获取 content
+                    let content = data?.result?.output?.content 
+                        || data?.output?.content
+                        || data?.content
+                        || data?.message?.content;
+                        
+                    if (content) {
+                        fullContent += content;
+                        
+                        // 处理 <think> 标签过滤
+                        let displayContent = fullContent;
+                        
+                        // 移除已完成的 <think>...</think> 块
+                        displayContent = displayContent.replace(/<think>[\s\S]*?<\/think>/g, '');
+                        
+                        // 检查是否还在思考中（有 <think> 开始但没有 </think> 结束）
+                        const thinkStart = displayContent.indexOf('<think>');
+                        if (thinkStart !== -1) {
+                            // 截取 <think> 之前的内容
+                            displayContent = displayContent.substring(0, thinkStart);
+                        }
+                        
+                        displayContent = displayContent.trim();
+                        
+                        // 只有有实际内容时才更新显示
+                        if (displayContent) {
+                            updateAIMessage(messageId, displayContent);
+                        }
+                    }
+                    
+                    // 检查结束标识
+                    const finishReason = data?.result?.metadata?.finishReason 
+                        || data?.metadata?.finishReason
+                        || data?.finishReason;
+                    if (finishReason === 'STOP') {
+                        console.log('Stream finished');
+                        eventSource.close();
+                        setButtonState(false);
+                    }
+                } catch (e) {
+                    console.log('Parse error:', e.message);
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('EventSource error:', error);
+                eventSource.close();
+                if (!fullContent) {
+                    updateAIMessage(messageId, '抱歉，请求出现错误，请重试。');
+                }
+                setButtonState(false);
+            };
+
+            eventSource.addEventListener('close', function() {
+                eventSource.close();
+                setButtonState(false);
+            });
+        }
+
+        // 事件监听
+        sendBtn.addEventListener('click', sendMessage);
+        newChatBtn.addEventListener('click', startNewChat);
+        
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        messageInput.focus();
+    </script>
+</body>
+</html>

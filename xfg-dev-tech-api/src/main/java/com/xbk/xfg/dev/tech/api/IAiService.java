@@ -11,8 +11,8 @@ import reactor.core.publisher.Flux;
  */
 public interface IAiService {
 
-    ChatResponse generate(OllamaRequest request);
+    ChatResponse generate(String model, String message);
 
-    Flux<ChatResponse> generateStream(OllamaRequest request);
+    Flux<ChatResponse> generateStream(String model, String message);
 
 }
