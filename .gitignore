@@ -43,7 +43,3 @@ build/
 ### Temp ###
 git-cloned-repo/
 xfg-dev-tech-app/cloned-repo/
-
-### Claude Code ###
-.claude/
-CLAUDE.md
