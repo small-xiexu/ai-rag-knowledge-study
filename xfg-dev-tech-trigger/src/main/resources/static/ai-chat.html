@@ -96,7 +96,24 @@
                     管理知识库
                 </a>
                 
+                <!-- 模型配置入口 -->
+                <a href="model-config.html" class="w-full py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    模型配置
+                </a>
+                
                 <div class="space-y-3 pt-2">
+                    <!-- 配置选择 -->
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">当前配置 (全局)</label>
+                        <select id="configSelect" onchange="switchConfig()" class="w-full h-9 px-3 text-xs font-medium bg-green-50/50 border border-green-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-300 text-green-700 transition-all cursor-pointer hover:bg-green-50">
+                            <option value="" disabled selected>加载中...</option>
+                        </select>
+                    </div>
+                    
                     <div class="space-y-1.5">
                         <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">RAG 知识库</label>
                         <select id="ragTagSelect" class="w-full h-9 px-3 text-xs font-medium bg-purple-50/50 border border-purple-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300 text-purple-700 transition-all cursor-pointer hover:bg-purple-50">
@@ -158,7 +175,7 @@
                             id="messageInput" 
                             placeholder="输入消息，按下 Enter 发送..." 
                             rows="1"
-                            class="w-full min-h-[52px] max-h-32 px-5 py-3.5 bg-white border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm leading-relaxed shadow-sm group-hover:shadow-md"
+                            class="w-full min-h-[52px] max-h-32 px-5 py-3.5 bg-white border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm leading-relaxed overflow-hidden"
                             onkeydown="handleKeyDown(event)"
                             oninput="autoResize(this)"
                         ></textarea>
@@ -217,7 +234,78 @@
             });
             // 加载知识库列表
             loadRagTagList();
+            // 加载 LLM 配置
+            loadConfigs();
         });
+
+        // 加载配置列表
+        async function loadConfigs() {
+            try {
+                // 并行加载所有配置和当前激活配置
+                const [configsRes, activeRes] = await Promise.all([
+                    fetch('/api/v1/llm/configs').then(r => r.json()),
+                    fetch('/api/v1/llm/configs/active').then(r => r.json())
+                ]);
+
+                const select = document.getElementById('configSelect');
+                select.innerHTML = '';
+                
+                let configs = [];
+                if (configsRes.code === '0000' && configsRes.data) {
+                    configs = configsRes.data;
+                    configs.forEach(config => {
+                        const option = document.createElement('option');
+                        option.value = config.id;
+                        // 显示名称和提供商类型
+                        const icon = config.providerType === 'OLLAMA' ? '🦙' : (config.providerType === 'OPENAI' ? '🤖' : '🧠');
+                        option.textContent = `${icon} ${config.name}`;
+                        // 保存模型列表到 dataset 以便后续使用
+                        option.dataset.models = (config.models || []).join(',');
+                        option.dataset.defaultModel = config.defaultModel || '';
+                        select.appendChild(option);
+                    });
+                }
+                
+                // 设置当前激活项
+                if (activeRes.code === '0000' && activeRes.data) {
+                    select.value = activeRes.data.id;
+                    updateModelOptions(activeRes.data);
+                } else if (configs.length > 0) {
+                    // 如果没有激活的（不太可能），默认选中第一个但不激活（或者自动激活？）
+                    // 这里仅UI选中
+                    select.value = configs[0].id;
+                    updateModelOptions(configs[0]);
+                } else {
+                     select.innerHTML = '<option disabled>暂无配置，请去添加</option>';
+                }
+
+            } catch (e) { console.error('加载配置失败:', e); }
+        }
+
+        // 切换配置
+        async function switchConfig() {
+            const select = document.getElementById('configSelect');
+            const id = select.value;
+            if (!id) return;
+            
+            // 获取选中项的模型信息
+            const option = select.options[select.selectedIndex];
+            const models = option.dataset.models ? option.dataset.models.split(',') : [];
+            const defaultModel = option.dataset.defaultModel;
+
+            // 更新模型下拉框
+            updateModelOptions({ models, defaultModel });
+
+            try {
+                // 调用后端激活接口
+                await fetch(`/api/v1/llm/configs/${id}/activate`, { method: 'POST' });
+                // 提示用户（可选，或者静默成功）
+                console.log('配置已切换:', option.text);
+            } catch (e) {
+                console.error('切换配置失败:', e);
+                alert('切换配置失败，请重试');
+            }
+        }
 
         // 加载知识库列表填充下拉框
         async function loadRagTagList() {
@@ -425,20 +513,60 @@
             startStreamRequest(message);
         }
 
+        // 根据配置更新模型选项
+        function updateModelOptions(config) {
+            const modelSelect = document.getElementById('modelSelect');
+            modelSelect.innerHTML = '';
+            
+            let models = config.models || [];
+            // 如果从 dataset 传过来可能已经是数组，如果是对象（loadConfigs调用）则取属性
+            // 注意：switchConfig 中从 dataset 取出的是 context，可能需要重新处理
+            
+            // 简单处理：如果是字符串数组
+            if (Array.isArray(config.models)) {
+                 models = config.models;
+            } else if (config.models && typeof config.models === 'string') {
+                 // 这种情况不太可能发生，除非数据结构变了
+                 models = config.models.split(',');
+            }
+            
+            if (models.length === 0) {
+                 // 如果没有配置模型列表，给几个默认的或者允许自由输入（这里暂时给个提示）
+                 const option = document.createElement('option');
+                 option.value = config.defaultModel || 'gpt-3.5-turbo';
+                 option.textContent = (config.defaultModel || 'gpt-3.5-turbo') + ' (默认)';
+                 modelSelect.appendChild(option);
+            } else {
+                models.forEach(model => {
+                    const m = model.trim();
+                    if (!m) return;
+                    const option = document.createElement('option');
+                    option.value = m;
+                    option.textContent = m;
+                    if (config.defaultModel && m === config.defaultModel) {
+                        option.selected = true;
+                    }
+                    modelSelect.appendChild(option);
+                });
+            }
+        }
+
         function startStreamRequest(message) {
             isGenerating = true;
             updateSendButton();
             const model = document.getElementById('modelSelect').value;
             const ragTag = document.getElementById('ragTagSelect').value;
             
-            // 根据是否选择知识库决定调用哪个 API
+            // 使用统一的动态 AI 端点
+            const baseUrl = '/api/v1/ai';
             let apiUrl;
+            
             if (ragTag) {
                 // RAG 模式：使用知识库检索增强
-                apiUrl = `/api/v1/rag/generate_stream_rag?model=${encodeURIComponent(model)}&ragTag=${encodeURIComponent(ragTag)}&message=${encodeURIComponent(message)}`;
+                apiUrl = `${baseUrl}/generate_stream_rag?model=${encodeURIComponent(model)}&ragTag=${encodeURIComponent(ragTag)}&message=${encodeURIComponent(message)}`;
             } else {
                 // 普通模式：直接对话
-                apiUrl = `/api/v1/ollama/generate_stream?model=${encodeURIComponent(model)}&message=${encodeURIComponent(message)}`;
+                apiUrl = `${baseUrl}/generate_stream?model=${encodeURIComponent(model)}&message=${encodeURIComponent(message)}`;
             }
             
             let fullContent = '';
@@ -461,7 +589,7 @@
             
             currentEventSource.onerror = function() {
                 stopGeneration();
-                if (!fullContent) updateLastAIMessage('请求出错，请重试');
+                if (!fullContent) updateLastAIMessage('请求出错，请重试。提示：请先在模型配置页面添加并激活一个配置。');
             };
         }
 
@@ -492,7 +620,11 @@
         }
 
         function handleKeyDown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-        function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 128) + 'px'; }
+        function autoResize(el) { 
+            el.style.height = 'auto'; 
+            el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+            el.style.overflowY = el.scrollHeight > 128 ? 'auto' : 'hidden';
+        }
         function scrollToBottom() { const c = document.getElementById('messagesContainer'); c.scrollTop = c.scrollHeight; }
         function toggleSidebar() { const s = document.getElementById('sidebar'); s.classList.toggle('hidden'); }
         function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }

@@ -8,11 +8,11 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.ollama.OllamaChatClient;
+
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.PgVectorStore;
-import org.springframework.ai.vectorstore.SimpleVectorStore;
+
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.PathResource;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -39,17 +39,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class JGitTest {
 
-    // 注入 Ollama 聊天客户端，用于后续的 AI 对话（本测试中未使用）
-    @Resource
-    private OllamaChatClient ollamaChatClient;
+
     
     // 注入文本分割器，用于将长文档切割成小块
     @Resource
     private TokenTextSplitter tokenTextSplitter;
     
     // 注入简单向量存储（内存/文件存储，本测试中未使用）
-    @Resource
-    private SimpleVectorStore simpleVectorStore;
+
     
     // 注入 PgVector 向量数据库存储，用于存储文档向量
     @Resource

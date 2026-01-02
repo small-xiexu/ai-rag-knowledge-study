@@ -33,6 +33,13 @@ spring:
         options:
           num-batch: 512
         model: nomic-embed-text
+    openai:
+      base-url: https://www.88code.ai/openai
+      api-key: 88_53bbc565d302a7c7b25dcb6ceeccf789a6c073e286d6b780b7d6d1765842d0c8
+      embedding-model: text-embedding-ada-002
+    rag:
+      # 使用 Ollama 本地嵌入模型（88code.ai 不支持 embeddings 接口）
+      embed: nomic-embed-text
 
 # Redis
 redis:

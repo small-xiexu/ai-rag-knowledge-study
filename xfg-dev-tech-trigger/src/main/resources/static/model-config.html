@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模型配置 - RAG 系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .config-card {
+            animation: slideIn 0.3s ease-out;
+            transition: all 0.2s ease;
+        }
+
+        .config-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+        }
+
+        .config-card.active {
+            border-color: #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.02) 100%);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .nav-link {
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            transform: translateY(-1px);
+        }
+
+        .provider-badge {
+            font-size: 0.65rem;
+            padding: 2px 8px;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <div class="glass-card rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden">
+        <!-- 头部 -->
+        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-8 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">模型配置</h1>
+                        <p class="text-white/80 text-sm mt-1">管理您的 AI 模型提供商</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="ai-chat.html" class="nav-link flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors backdrop-blur" title="返回聊天">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                        <span class="text-white font-medium text-sm">聊天</span>
+                    </a>
+                    <button onclick="openAddModal()" class="nav-link flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-xl transition-colors shadow-sm">
+                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span class="text-indigo-600 font-medium text-sm">添加配置</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 内容区域 -->
+        <div class="p-8">
+            <!-- 当前激活配置提示 -->
+            <div id="activeConfigBanner" class="hidden mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-green-800">当前激活: <span id="activeConfigName">-</span></p>
+                        <p class="text-xs text-green-600 mt-0.5" id="activeConfigUrl">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 配置卡片网格 -->
+            <div id="configGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- 加载状态 -->
+                <div id="loadingState" class="col-span-2 flex flex-col items-center justify-center py-16">
+                    <svg class="loading-spinner w-10 h-10 text-indigo-500 mb-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-gray-500 text-sm">加载中...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部 -->
+        <div class="px-8 py-4 bg-gray-50 border-t border-gray-100">
+            <p class="text-center text-xs text-gray-500">
+                配置存储在 Redis 中，切换配置后立即生效
+            </p>
+        </div>
+    </div>
+
+    <!-- 添加/编辑配置弹窗 -->
+    <div id="configModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+        <div class="modal-backdrop absolute inset-0" onclick="closeModal()"></div>
+        <div class="glass-card relative z-10 w-full max-w-lg mx-4 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-4">
+                <h2 id="modalTitle" class="text-xl font-bold text-white">添加配置</h2>
+            </div>
+            <form id="configForm" class="p-6 space-y-5" onsubmit="saveConfig(event)">
+                <input type="hidden" id="configId">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">配置名称 *</label>
+                    <input type="text" id="configName" required
+                        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                        placeholder="例如：OpenAI 官方、Claude Code 中转站">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">提供商类型 *</label>
+                    <select id="providerType" required onchange="onProviderTypeChange()"
+                        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+                        <option value="OPENAI">OpenAI (兼容)</option>
+                        <option value="OLLAMA">Ollama (本地)</option>
+                        <option value="ANTHROPIC">Anthropic (Claude)</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">API 地址 *</label>
+                    <input type="url" id="baseUrl" required
+                        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                        placeholder="https://api.openai.com">
+                </div>
+                
+                <div id="apiKeyField">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                    <input type="password" id="apiKey"
+                        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                        placeholder="sk-...">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">默认模型</label>
+                    <input type="text" id="defaultModel"
+                        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                        placeholder="例如：gpt-4o, claude-3-opus">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">模型列表 (逗号分隔)</label>
+                    <input type="text" id="models"
+                        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                        placeholder="gpt-4o, gpt-3.5-turbo, claude-3-opus">
+                </div>
+                
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal()"
+                        class="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors">
+                        取消
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow-sm">
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8090/api/v1/llm';
+        let configs = [];
+
+        // 提供商类型映射
+        const providerLabels = {
+            'OPENAI': { label: 'OpenAI', color: 'bg-green-100 text-green-700' },
+            'OLLAMA': { label: 'Ollama', color: 'bg-blue-100 text-blue-700' },
+            'ANTHROPIC': { label: 'Anthropic', color: 'bg-purple-100 text-purple-700' }
+        };
+
+        // 加载配置列表
+        async function loadConfigs() {
+            const grid = document.getElementById('configGrid');
+            grid.innerHTML = `
+                <div id="loadingState" class="col-span-2 flex flex-col items-center justify-center py-16">
+                    <svg class="loading-spinner w-10 h-10 text-indigo-500 mb-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-gray-500 text-sm">加载中...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_BASE}/configs`);
+                const result = await response.json();
+
+                if (result.code === '0000' && result.data) {
+                    configs = result.data;
+                    renderConfigs(configs);
+                    updateActiveBanner();
+                } else {
+                    renderError(result.info || '加载失败');
+                }
+            } catch (error) {
+                console.error('加载配置失败:', error);
+                renderError('网络错误，请检查服务器连接');
+            }
+        }
+
+        // 渲染配置卡片
+        function renderConfigs(configs) {
+            const grid = document.getElementById('configGrid');
+
+            if (configs.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-2 flex flex-col items-center justify-center py-16">
+                        <div class="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mb-6">
+                            <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">暂无配置</h3>
+                        <p class="text-gray-500 text-sm mb-6">添加您的第一个模型配置</p>
+                        <button onclick="openAddModal()" class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-sm font-medium rounded-xl transition-all shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            添加配置
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = configs.map((config, index) => {
+                const provider = providerLabels[config.providerType] || { label: config.providerType, color: 'bg-gray-100 text-gray-700' };
+                return `
+                    <div class="config-card ${config.active ? 'active' : ''} p-5 bg-white rounded-xl border-2 ${config.active ? 'border-green-400' : 'border-gray-100'}" style="animation-delay: ${index * 0.05}s">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800">${escapeHtml(config.name)}</h3>
+                                    <span class="provider-badge ${provider.color} rounded-full font-medium">${provider.label}</span>
+                                </div>
+                            </div>
+                            ${config.active ? `
+                                <span class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-600 rounded-full flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    已激活
+                                </span>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="space-y-2 mb-4">
+                            <p class="text-xs text-gray-500 truncate" title="${escapeHtml(config.baseUrl)}">
+                                <span class="font-medium">URL:</span> ${escapeHtml(config.baseUrl)}
+                            </p>
+                            ${config.defaultModel ? `
+                                <p class="text-xs text-gray-500">
+                                    <span class="font-medium">默认模型:</span> ${escapeHtml(config.defaultModel)}
+                                </p>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="flex items-center gap-2 pt-3 border-t border-gray-100">
+                            ${!config.active ? `
+                                <button onclick="activateConfig('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                                    激活
+                                </button>
+                            ` : ''}
+                            <button id="test-btn-${config.id}" onclick="testConnection('${config.id}')" class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors" title="测试连接">
+                                测试
+                            </button>
+                            <button onclick="editConfig('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+                                编辑
+                            </button>
+                            ${!config.active ? `
+                                <button onclick="deleteConfig('${config.id}')" class="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                                    删除
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 渲染错误状态
+        function renderError(message) {
+            const grid = document.getElementById('configGrid');
+            grid.innerHTML = `
+                <div class="col-span-2 flex flex-col items-center justify-center py-16">
+                    <div class="w-20 h-20 bg-gradient-to-br from-red-100 to-red-200 rounded-2xl flex items-center justify-center mb-6">
+                        <svg class="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">加载失败</h3>
+                    <p class="text-gray-500 text-sm mb-6">${escapeHtml(message)}</p>
+                    <button onclick="loadConfigs()" class="flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-xl transition-all">
+                        重试
+                    </button>
+                </div>
+            `;
+        }
+
+        // 更新激活配置横幅
+        function updateActiveBanner() {
+            const banner = document.getElementById('activeConfigBanner');
+            const activeConfig = configs.find(c => c.active);
+
+            if (activeConfig) {
+                banner.classList.remove('hidden');
+                document.getElementById('activeConfigName').textContent = activeConfig.name;
+                document.getElementById('activeConfigUrl').textContent = activeConfig.baseUrl;
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
+        // 打开添加弹窗
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = '添加配置';
+            document.getElementById('configForm').reset();
+            document.getElementById('configId').value = '';
+            onProviderTypeChange();
+            document.getElementById('configModal').classList.remove('hidden');
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('configModal').classList.add('hidden');
+        }
+
+        // 提供商类型改变时
+        function onProviderTypeChange() {
+            const type = document.getElementById('providerType').value;
+            const apiKeyField = document.getElementById('apiKeyField');
+            
+            if (type === 'OLLAMA') {
+                apiKeyField.classList.add('hidden');
+            } else {
+                apiKeyField.classList.remove('hidden');
+            }
+        }
+
+        // 编辑配置
+        function editConfig(id) {
+            const config = configs.find(c => c.id === id);
+            if (!config) return;
+
+            document.getElementById('modalTitle').textContent = '编辑配置';
+            document.getElementById('configId').value = config.id;
+            document.getElementById('configName').value = config.name;
+            document.getElementById('providerType').value = config.providerType;
+            document.getElementById('baseUrl').value = config.baseUrl;
+            document.getElementById('apiKey').value = config.apiKey || '';
+            document.getElementById('defaultModel').value = config.defaultModel || '';
+            document.getElementById('models').value = (config.models || []).join(', ');
+            
+            onProviderTypeChange();
+            document.getElementById('configModal').classList.remove('hidden');
+        }
+
+        // 保存配置
+        async function saveConfig(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('configId').value;
+            const modelsStr = document.getElementById('models').value;
+            const models = modelsStr ? modelsStr.split(',').map(m => m.trim()).filter(m => m) : [];
+
+            const config = {
+                name: document.getElementById('configName').value,
+                providerType: document.getElementById('providerType').value,
+                baseUrl: document.getElementById('baseUrl').value,
+                apiKey: document.getElementById('apiKey').value || null,
+                defaultModel: document.getElementById('defaultModel').value || null,
+                models: models
+            };
+
+            try {
+                const url = id ? `${API_BASE}/configs/${id}` : `${API_BASE}/configs`;
+                const method = id ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+
+                const result = await response.json();
+
+                if (result.code === '0000') {
+                    closeModal();
+                    loadConfigs();
+                } else {
+                    alert(result.info || '保存失败');
+                }
+            } catch (error) {
+                console.error('保存失败:', error);
+                alert('网络错误，保存失败');
+            }
+        }
+
+        // 激活配置
+        async function activateConfig(id) {
+            try {
+                const response = await fetch(`${API_BASE}/configs/${id}/activate`, { method: 'POST' });
+                const result = await response.json();
+
+                if (result.code === '0000') {
+                    loadConfigs();
+                } else {
+                    alert(result.info || '激活失败');
+                }
+            } catch (error) {
+                console.error('激活失败:', error);
+                alert('网络错误，激活失败');
+            }
+        }
+
+        // 测试连接
+        async function testConnection(id) {
+            const config = configs.find(c => c.id === id);
+            if (!config) return;
+            
+            const btn = document.getElementById(`test-btn-${id}`);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>`;
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/configs/test`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                const result = await response.json();
+
+                if (result.code === '0000' && result.data === true) {
+                    btn.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+                } else {
+                    alert('连接失败: ' + (result.info || '未知错误'));
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('测试失败:', error);
+                alert('网络错误，测试失败');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // 删除配置
+        async function deleteConfig(id) {
+            const config = configs.find(c => c.id === id);
+            if (!confirm(`确定要删除配置 "${config?.name}" 吗？`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/configs/${id}`, { method: 'DELETE' });
+                const result = await response.json();
+
+                if (result.code === '0000') {
+                    loadConfigs();
+                } else {
+                    alert(result.info || '删除失败');
+                }
+            } catch (error) {
+                console.error('删除失败:', error);
+                alert('网络错误，删除失败');
+            }
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', loadConfigs);
+    </script>
+</body>
+</html>

@@ -6,31 +6,22 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RList;
 import org.redisson.api.RedissonClient;
-import org.springframework.ai.ollama.OllamaChatClient;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.PgVectorStore;
-import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.ai.vectorstore.SimpleVectorStore;
-import org.springframework.ai.chat.ChatResponse;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.chat.prompt.SystemPromptTemplate;
-import org.springframework.ai.ollama.api.OllamaOptions;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import reactor.core.publisher.Flux;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.Git;
@@ -38,6 +29,7 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.redisson.api.RBucket;
 import com.xbk.xfg.dev.tech.api.dto.TaskProgressDTO;
 import org.springframework.core.io.PathResource;
+
 
 /**
  * @author xiexu
@@ -49,13 +41,7 @@ import org.springframework.core.io.PathResource;
 public class RAGController implements IRAGService {
 
     @Resource
-    private OllamaChatClient ollamaChatClient;
-
-    @Resource
     private TokenTextSplitter tokenTextSplitter;
-
-    @Resource
-    private SimpleVectorStore simpleVectorStore;
 
     @Resource
     private PgVectorStore pgVectorStore;
@@ -104,6 +90,7 @@ public class RAGController implements IRAGService {
      * @param ragTag 要删除的标签名称
      * @return true 表示删除成功，false 表示标签不存在
      */
+    @Override
     @RequestMapping(value = "delete_rag_tag", method = RequestMethod.POST)
     public Response<Boolean> deleteRagTag(@RequestParam String ragTag) {
         try {
@@ -194,67 +181,6 @@ public class RAGController implements IRAGService {
         return Response.<String>builder().code("0000").info("调用成功").build();
     }
 
-    /**
-     * 【RAG 对话接口 - 流式输出】
-     * 检索知识库相关文档，拼接上下文后调用大模型生成回答
-     * 这是 RAG 系统的核心功能：检索增强生成
-     *
-     * @param model   模型名称（如 deepseek-r1:1.5b）
-     * @param ragTag  知识库标签名称（用于过滤检索范围）
-     * @param message 用户问题
-     * @return 流式 AI 回答
-     */
-    @GetMapping(value = "generate_stream_rag", produces = "text/event-stream")
-    public Flux<ChatResponse> ragChatStream(
-            @RequestParam("model") String model,
-            @RequestParam("ragTag") String ragTag,
-            @RequestParam("message") String message) {
-        
-        log.info("RAG对话请求 - 模型:{}, 知识库:{}, 问题:{}", model, ragTag, message);
-
-        // 第一步：定义系统提示词模板
-        String systemPrompt = """
-                请根据【文档资料】部分的内容来准确回答用户的问题。
-                回答时请表现得像你本来就知道这些信息一样，不要提及"根据文档"等字眼。
-                如果你不确定答案，请直接说"我不知道"，不要编造信息。
-                请务必使用中文回复！
-                
-                【文档资料】:
-                    {documents}
-                """;
-
-        // 第二步：构建向量检索请求
-        // 把用户问题转成向量，在知识库中查找最相似的文档块
-        // 返回最相似的 5 条结果，按知识库标签过滤
-        SearchRequest request = SearchRequest.query(message)
-                .withTopK(5)
-                .withFilterExpression("knowledge == '" + ragTag + "'");
-
-        // 第三步：执行向量相似度检索
-        List<Document> documents = pgVectorStore.similaritySearch(request);
-        
-        // 把检索到的文档内容拼接成一个字符串
-        String documentsContent = documents.stream()
-                .map(Document::getContent)
-                .collect(Collectors.joining("\n\n"));
-        
-        log.info("检索到 {} 条相关文档", documents.size());
-
-        // 第四步：构建消息列表
-        // 用检索到的文档替换模板中的 {documents} 占位符
-        Message ragMessage = new SystemPromptTemplate(systemPrompt)
-                .createMessage(Map.of("documents", documentsContent));
-
-        // 组装消息列表
-        ArrayList<Message> messages = new ArrayList<>();
-        // 用户问题
-        messages.add(new UserMessage(message));
-        // 包含检索资料的系统提示
-        messages.add(ragMessage);
-
-        // 第五步：流式调用大模型生成回答
-        return ollamaChatClient.stream(new Prompt(messages, OllamaOptions.create().withModel(model)));
-    }
 
     /**
      * 【分析 Git 仓库 - 异步任务提交接口】
@@ -273,7 +199,7 @@ public class RAGController implements IRAGService {
             @RequestParam("token") String token) {
         
         // 1. 生成全局唯一的任务 ID (UUID)
-        String taskId = java.util.UUID.randomUUID().toString();
+        String taskId = UUID.randomUUID().toString();
         
         // 2. 初始化任务进度对象，并存入 Redis
         // 状态: PROCESSING, 进度: 0%
@@ -285,11 +211,11 @@ public class RAGController implements IRAGService {
                 .build();
         
         // 存入 Redis，设置 1 小时过期 (防止僵尸任务占用内存)
-        redissonClient.getBucket("task:progress:" + taskId).set(progress, 1, java.util.concurrent.TimeUnit.HOURS);
+        redissonClient.getBucket("task:progress:" + taskId).set(progress, 1, TimeUnit.HOURS);
         
         // 3. 启动异步线程执行实际的 Git 分析逻辑
         // CompletableFuture.runAsync 会使用 ForkJoinPool.commonPool() 线程池
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(() -> {
             processGitRepository(taskId, repoUrl, userName, token);
         });
 
@@ -329,7 +255,7 @@ public class RAGController implements IRAGService {
     public Response<String> cancelTask(@RequestParam("taskId") String taskId) {
         // 在 Redis 中设置一个特殊的 Key "task:stop:{taskId}"
         // 异步线程在运行过程中会不断检查这个 Key 是否存在，一旦发现存在，就会抛出异常立即停止
-        redissonClient.getBucket("task:stop:" + taskId).set("STOP", 5, java.util.concurrent.TimeUnit.MINUTES);
+        redissonClient.getBucket("task:stop:" + taskId).set("STOP", 5, TimeUnit.MINUTES);
         return Response.<String>builder().code("0000").info("任务取消指令已下达").build();
     }
 
@@ -388,7 +314,7 @@ public class RAGController implements IRAGService {
             // ==================== 阶段 2: 统计文件 ====================
             // 第一次遍历：只为了统计有多少个有效文件，方便后续计算进度条的百分比
             // 使用 AtomicInteger 保证线程安全（虽然这里是单线程执行，但作为计数器很方便）
-            java.util.concurrent.atomic.AtomicInteger totalFiles = new java.util.concurrent.atomic.AtomicInteger(0);
+            AtomicInteger totalFiles = new AtomicInteger(0);
             Files.walkFileTree(Paths.get(localPath), new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
@@ -414,7 +340,7 @@ public class RAGController implements IRAGService {
 
             // ==================== 阶段 3: 解析与向量化 ====================
             // 第二次遍历：真正的处理逻辑
-            java.util.concurrent.atomic.AtomicInteger current = new java.util.concurrent.atomic.AtomicInteger(0);
+            AtomicInteger current = new AtomicInteger(0);
             int total = totalFiles.get() > 0 ? totalFiles.get() : 1; // 避免除以 0
 
             Files.walkFileTree(Paths.get(localPath), new SimpleFileVisitor<>() {
@@ -571,7 +497,7 @@ public class RAGController implements IRAGService {
         p.setPercentage(percentage);
         p.setStatusDescription(msg);
         p.setState(state);
-        bucket.set(p, 1, java.util.concurrent.TimeUnit.HOURS);
+        bucket.set(p, 1, TimeUnit.HOURS);
     }
 
     /**
