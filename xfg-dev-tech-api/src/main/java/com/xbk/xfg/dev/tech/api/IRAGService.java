@@ -1,5 +1,6 @@
 package com.xbk.xfg.dev.tech.api;
 
+import com.xbk.xfg.dev.tech.api.dto.TaskProgressDTO;
 import com.xbk.xfg.dev.tech.api.response.Response;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -35,7 +36,7 @@ public interface IRAGService {
      * @param token    Git 密码或token令牌
      * @return
      */
-    Response<String> analyzeGitRepository(String repoUrl, String userName, String token) throws Exception;
+    Response<String> analyzeGitRepository(String repoUrl, String userName, String token);
 
     /**
      * 删除知识库标签
@@ -43,4 +44,18 @@ public interface IRAGService {
      * @return 是否成功
      */
     Response<Boolean> deleteRagTag(String ragTag);
+
+    /**
+     * 查询任务进度
+     * @param taskId 任务ID
+     * @return 任务进度
+     */
+    Response<TaskProgressDTO> queryTaskProgress(String taskId);
+
+    /**
+     * 取消任务
+     * @param taskId 任务ID
+     * @return 操作结果
+     */
+    Response<String> cancelTask(String taskId);
 }

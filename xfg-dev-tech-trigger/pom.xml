@@ -56,6 +56,10 @@
             <artifactId>xfg-dev-tech-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.xbk</groupId>
+            <artifactId>xfg-dev-tech-app</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson</artifactId>
             <version>3.44.0</version>

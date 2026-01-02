@@ -15,6 +15,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.xbk</groupId>
+            <artifactId>xfg-dev-tech-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
@@ -79,10 +83,6 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>com.xbk</groupId>
-            <artifactId>xfg-dev-tech-trigger</artifactId>
-        </dependency>
     </dependencies>
 
     <build>
