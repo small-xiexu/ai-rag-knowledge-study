@@ -3,7 +3,7 @@ package com.xbk.xfg.dev.tech.trigger.http;
 import com.xbk.xfg.dev.tech.api.IRAGService;
 import com.xbk.xfg.dev.tech.api.dto.TaskProgressDTO;
 import com.xbk.xfg.dev.tech.api.response.Response;
-import com.xbk.xfg.dev.tech.service.RAGDomainService;
+import com.xbk.xfg.dev.tech.domain.service.RAGDomainService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;

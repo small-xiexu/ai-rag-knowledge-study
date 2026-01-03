@@ -1,6 +1,6 @@
-package com.xbk.xfg.dev.tech.repository.impl;
+package com.xbk.xfg.dev.tech.domain.repository.impl;
 
-import com.xbk.xfg.dev.tech.repository.VectorStoreRepository;
+import com.xbk.xfg.dev.tech.domain.repository.VectorStoreRepository;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;

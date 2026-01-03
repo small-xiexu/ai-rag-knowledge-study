@@ -1,4 +1,4 @@
-package com.xbk.xfg.dev.tech.factory;
+package com.xbk.xfg.dev.tech.domain.factory;
 
 import com.xbk.xfg.dev.tech.api.dto.LlmProviderConfigDTO;
 import jakarta.annotation.Resource;
@@ -337,6 +337,25 @@ public class DynamicChatClientFactory {
             }
             LlmProviderConfigDTO config = getConfigById(configId);
             return config != null ? config.getProviderType() : null;
+        } finally {
+            rwLock.readLock().unlock();
+        }
+    }
+
+    /**
+     * 获取当前激活配置的默认模型
+     *
+     * @return 默认模型名称，如果没有配置则返回 null
+     */
+    public String getActiveDefaultModel() {
+        rwLock.readLock().lock();
+        try {
+            String configId = getActiveConfigId();
+            if (configId == null) {
+                return null;
+            }
+            LlmProviderConfigDTO config = getConfigById(configId);
+            return config != null ? config.getDefaultModel() : null;
         } finally {
             rwLock.readLock().unlock();
         }

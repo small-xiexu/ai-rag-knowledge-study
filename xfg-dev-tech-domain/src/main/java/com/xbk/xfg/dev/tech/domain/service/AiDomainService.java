@@ -1,7 +1,7 @@
-package com.xbk.xfg.dev.tech.service;
+package com.xbk.xfg.dev.tech.domain.service;
 
-import com.xbk.xfg.dev.tech.factory.DynamicChatClientFactory;
-import com.xbk.xfg.dev.tech.factory.DynamicChatClientFactory.ChatClientWrapper;
+import com.xbk.xfg.dev.tech.domain.factory.DynamicChatClientFactory;
+import com.xbk.xfg.dev.tech.domain.factory.DynamicChatClientFactory.ChatClientWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.ChatResponse;
@@ -89,12 +89,21 @@ public class AiDomainService {
 
     /**
      * 根据模型名称创建对应的配置选项
+     * 如果 model 为空，使用当前激活配置的默认模型
      */
     private org.springframework.ai.chat.prompt.ChatOptions createOptions(String model) {
         String providerType = dynamicChatClientFactory.getActiveProviderType();
-        if ("OLLAMA".equalsIgnoreCase(providerType)) {
-            return org.springframework.ai.ollama.api.OllamaOptions.create().withModel(model);
+        String actualModel = model;
+        
+        // 如果没有指定模型，使用默认模型
+        if (actualModel == null || actualModel.isEmpty()) {
+            actualModel = dynamicChatClientFactory.getActiveDefaultModel();
+            log.info("使用默认模型: {}", actualModel);
         }
-        return OpenAiChatOptions.builder().withModel(model).build();
+        
+        if ("OLLAMA".equalsIgnoreCase(providerType)) {
+            return org.springframework.ai.ollama.api.OllamaOptions.create().withModel(actualModel);
+        }
+        return OpenAiChatOptions.builder().withModel(actualModel).build();
     }
 }

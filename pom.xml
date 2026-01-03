@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>xfg-dev-tech-api</module>
+        <module>xfg-dev-tech-domain</module>
         <module>xfg-dev-tech-app</module>
         <module>xfg-dev-tech-trigger</module>
     </modules>
@@ -95,6 +96,11 @@
             <dependency>
                 <groupId>com.xbk</groupId>
                 <artifactId>xfg-dev-tech-api</artifactId>
+                <version>1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.xbk</groupId>
+                <artifactId>xfg-dev-tech-domain</artifactId>
                 <version>1.0</version>
             </dependency>
             <dependency>

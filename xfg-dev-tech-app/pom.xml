@@ -16,7 +16,11 @@
     <dependencies>
         <dependency>
             <groupId>com.xbk</groupId>
-            <artifactId>xfg-dev-tech-api</artifactId>
+            <artifactId>xfg-dev-tech-trigger</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.xbk</groupId>
+            <artifactId>xfg-dev-tech-domain</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -124,6 +128,7 @@
                 <configuration>
                     <mainClass>com.xbk.xfg.dev.tech.Application</mainClass>
                     <layout>JAR</layout>
+                    <classifier>exec</classifier>
                 </configuration>
             </plugin>
         </plugins>

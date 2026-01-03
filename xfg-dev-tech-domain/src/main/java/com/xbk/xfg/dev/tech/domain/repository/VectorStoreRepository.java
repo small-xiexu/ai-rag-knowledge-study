@@ -1,4 +1,4 @@
-package com.xbk.xfg.dev.tech.repository;
+package com.xbk.xfg.dev.tech.domain.repository;
 
 import org.springframework.ai.document.Document;
 

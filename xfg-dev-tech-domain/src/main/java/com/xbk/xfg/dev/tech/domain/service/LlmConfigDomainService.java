@@ -1,8 +1,8 @@
-package com.xbk.xfg.dev.tech.service;
+package com.xbk.xfg.dev.tech.domain.service;
 
 import com.xbk.xfg.dev.tech.api.dto.LlmProviderConfigDTO;
 import com.xbk.xfg.dev.tech.api.response.Response;
-import com.xbk.xfg.dev.tech.factory.DynamicChatClientFactory;
+import com.xbk.xfg.dev.tech.domain.factory.DynamicChatClientFactory;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBucket;

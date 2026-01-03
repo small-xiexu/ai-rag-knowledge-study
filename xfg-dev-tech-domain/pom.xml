@@ -9,18 +9,22 @@
         <version>1.0</version>
     </parent>
 
-    <artifactId>xfg-dev-tech-trigger</artifactId>
+    <artifactId>xfg-dev-tech-domain</artifactId>
 
     <dependencies>
+        <!-- API 模块 -->
+        <dependency>
+            <groupId>com.xbk</groupId>
+            <artifactId>xfg-dev-tech-api</artifactId>
+        </dependency>
+
+        <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
-        </dependency>
 
+        <!-- Spring AI -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
@@ -38,42 +42,42 @@
             <artifactId>spring-ai-ollama</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-tx</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.xbk</groupId>
-            <artifactId>xfg-dev-tech-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.xbk</groupId>
-            <artifactId>xfg-dev-tech-domain</artifactId>
-        </dependency>
+        <!-- Redis -->
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson</artifactId>
             <version>3.44.0</version>
         </dependency>
 
+        <!-- JGit -->
         <dependency>
             <groupId>org.eclipse.jgit</groupId>
             <artifactId>org.eclipse.jgit</artifactId>
         </dependency>
 
+        <!-- Utils -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+
+        <!-- Spring JDBC for repository -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
-        <finalName>xfg-dev-tech-trigger</finalName>
+        <finalName>xfg-dev-tech-domain</finalName>
     </build>
 
 </project>

@@ -1,8 +1,8 @@
-package com.xbk.xfg.dev.tech.service;
+package com.xbk.xfg.dev.tech.domain.service;
 
 import com.xbk.xfg.dev.tech.api.dto.TaskProgressDTO;
 import com.xbk.xfg.dev.tech.api.response.Response;
-import com.xbk.xfg.dev.tech.repository.VectorStoreRepository;
+import com.xbk.xfg.dev.tech.domain.repository.VectorStoreRepository;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;

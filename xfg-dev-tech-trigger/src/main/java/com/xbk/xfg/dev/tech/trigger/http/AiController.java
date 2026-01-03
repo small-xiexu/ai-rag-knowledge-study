@@ -1,7 +1,7 @@
 package com.xbk.xfg.dev.tech.trigger.http;
 
 import com.xbk.xfg.dev.tech.api.IAiService;
-import com.xbk.xfg.dev.tech.service.AiDomainService;
+import com.xbk.xfg.dev.tech.domain.service.AiDomainService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.ChatResponse;
@@ -29,7 +29,9 @@ public class AiController implements IAiService {
      */
     @Override
     @GetMapping("generate")
-    public ChatResponse generate(@RequestParam("model") String model, @RequestParam("message") String message) {
+    public ChatResponse generate(
+            @RequestParam(value = "model", required = false) String model,
+            @RequestParam("message") String message) {
         return aiDomainService.generate(model, message);
     }
 
@@ -39,7 +41,9 @@ public class AiController implements IAiService {
      */
     @Override
     @GetMapping(value = "generate_stream", produces = "text/event-stream")
-    public Flux<ChatResponse> generateStream(@RequestParam("model") String model, @RequestParam("message") String message) {
+    public Flux<ChatResponse> generateStream(
+            @RequestParam(value = "model", required = false) String model,
+            @RequestParam("message") String message) {
         return aiDomainService.generateStream(model, message);
     }
 
@@ -50,7 +54,7 @@ public class AiController implements IAiService {
     @Override
     @GetMapping(value = "generate_stream_rag", produces = "text/event-stream")
     public Flux<ChatResponse> generateStreamRag(
-            @RequestParam("model") String model,
+            @RequestParam(value = "model", required = false) String model,
             @RequestParam("ragTag") String ragTag,
             @RequestParam("message") String message) {
         return aiDomainService.generateStreamRag(model, ragTag, message);

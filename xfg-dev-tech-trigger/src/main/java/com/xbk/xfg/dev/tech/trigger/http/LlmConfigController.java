@@ -3,7 +3,7 @@ package com.xbk.xfg.dev.tech.trigger.http;
 import com.xbk.xfg.dev.tech.api.ILlmConfigService;
 import com.xbk.xfg.dev.tech.api.dto.LlmProviderConfigDTO;
 import com.xbk.xfg.dev.tech.api.response.Response;
-import com.xbk.xfg.dev.tech.service.LlmConfigDomainService;
+import com.xbk.xfg.dev.tech.domain.service.LlmConfigDomainService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
