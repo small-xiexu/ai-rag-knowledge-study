@@ -6,18 +6,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBucket;
 import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
-import org.springframework.ai.chat.ChatResponse;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.ollama.OllamaChatClient;
-import org.springframework.ai.ollama.api.OllamaApi;
-import org.springframework.ai.openai.OpenAiChatClient;
-import org.springframework.ai.openai.api.OpenAiApi;
-import org.springframework.stereotype.Component;
-
 import org.springframework.ai.ollama.api.OllamaOptions;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
+import com.xbk.xfg.dev.tech.domain.strategy.ChatClientStrategy;
+
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -81,6 +79,13 @@ public class DynamicChatClientFactory {
      */
     @Resource
     private RedissonClient redissonClient;
+
+    /**
+     * 客户端创建策略列表
+     * Spring 会自动注入所有实现 ChatClientStrategy 接口的 Bean
+     */
+    @Resource
+    private List<ChatClientStrategy> strategies;
 
     // ==================== 缓存与并发控制 ====================
 
@@ -291,36 +296,55 @@ public class DynamicChatClientFactory {
      */
     public boolean testConnection(LlmProviderConfigDTO config) {
         try {
-            // 创建临时客户端
+            // 使用策略创建临时客户端
             ChatClientWrapper client = createChatClient(config);
 
-            // 构建测试提示词
+            // 获取测试用的模型名称
+            String testModel = getTestModel(config);
+            
+            // 构建测试提示词，根据提供商类型使用不同的 Options
             Prompt prompt;
-            if (config.getDefaultModel() != null && !config.getDefaultModel().isEmpty()) {
-                // 如果配置了默认模型，使用指定模型测试
-                if ("OLLAMA".equalsIgnoreCase(config.getProviderType())) {
-                   prompt = new Prompt("hi", OllamaOptions.create().withModel(config.getDefaultModel()));
-                } else {
-                   prompt = new Prompt("hi", OpenAiChatOptions.builder().withModel(config.getDefaultModel()).build());
-                }
+            if ("OLLAMA".equalsIgnoreCase(config.getProviderType())) {
+                prompt = new Prompt("hi", OllamaOptions.builder().model(testModel).build());
             } else {
-                // 使用默认模型
-                prompt = new Prompt("hi");
+                prompt = new Prompt("hi", OpenAiChatOptions.builder().model(testModel).build());
             }
 
             // 发送测试请求
             ChatResponse response = client.call(prompt);
-            String content = response.getResult().getOutput().getContent();
+            String content = response.getResult().getOutput().getText();
 
             log.info("测试连接成功! 提供商: {}, 模型: {}, 响应: {}",
-                    config.getProviderType(),
-                    config.getDefaultModel() != null ? config.getDefaultModel() : "default",
-                    content);
+                    config.getProviderType(), testModel, content);
             return true;
         } catch (Exception e) {
             log.warn("测试连接失败: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * 获取测试连接使用的模型名称
+     * 优先使用配置的默认模型或 models 列表中的第一个，否则根据提供商类型返回合理的默认值
+     */
+    private String getTestModel(LlmProviderConfigDTO config) {
+        // 1. 优先使用配置的默认模型
+        if (config.getDefaultModel() != null && !config.getDefaultModel().isEmpty()) {
+            return config.getDefaultModel();
+        }
+        
+        // 2. 尝试使用 models 列表中的第一个
+        if (config.getModels() != null && !config.getModels().isEmpty()) {
+            return config.getModels().get(0);
+        }
+        
+        // 3. 根据提供商类型返回合理的默认模型
+        return switch (config.getProviderType().toUpperCase()) {
+            case "OLLAMA" -> "llama3:8b";
+            case "ANTHROPIC" -> "claude-3-5-sonnet-20241022";  // Claude 模型
+            case "GLM" -> "glm-4";  // 智谱模型
+            default -> "gpt-4o-mini";  // OpenAI 兼容的便宜模型
+        };
     }
 
     /**
@@ -363,82 +387,12 @@ public class DynamicChatClientFactory {
 
     // ==================== 私有方法：客户端创建 ====================
 
-    /**
-     * 根据配置创建 ChatClient 包装器 - 工厂方法模式
-     *
-     * <b>支持的提供商</b>
-     * - OPENAI: OpenAI 官方或兼容服务
-     * - ANTHROPIC: Claude（使用 OpenAI 兼容接口）
-     * - OLLAMA: 本地部署的开源模型
-     *
-     * @param config 配置信息
-     * @return ChatClient 包装器
-     * @throws IllegalArgumentException 如果提供商类型不支持
-     */
     private ChatClientWrapper createChatClient(LlmProviderConfigDTO config) {
-        return switch (config.getProviderType().toUpperCase()) {
-            case "OPENAI", "ANTHROPIC" -> createOpenAiWrapper(config);
-            case "OLLAMA" -> createOllamaWrapper(config);
-            default -> throw new IllegalArgumentException("不支持的提供商类型: " + config.getProviderType());
-        };
-    }
-
-    /**
-     * 创建 OpenAI 客户端包装器
-     *
-     * <b>适用场景</b>
-     * 1. OpenAI 官方服务
-     * 2. OpenAI 兼容服务（OneAPI、FastGPT、本地部署的 vLLM 等）
-     * 3. Anthropic Claude（通过兼容层）
-     *
-     * @param config 配置信息（包含 baseUrl 和 apiKey）
-     * @return OpenAI 客户端包装器
-     */
-    private ChatClientWrapper createOpenAiWrapper(LlmProviderConfigDTO config) {
-        // 创建 OpenAI API 客户端
-        OpenAiApi api = new OpenAiApi(config.getBaseUrl(), config.getApiKey());
-        OpenAiChatClient client = new OpenAiChatClient(api);
-
-        // 返回匿名内部类实现的包装器
-        return new ChatClientWrapper() {
-            @Override
-            public ChatResponse call(Prompt prompt) {
-                return client.call(prompt);
-            }
-            @Override
-            public Flux<ChatResponse> stream(Prompt prompt) {
-                return client.stream(prompt);
-            }
-        };
-    }
-
-    /**
-     * 创建 Ollama 客户端包装器
-     *
-     * <b>Ollama 特点</b>
-     * 1. 本地部署，无需 API Key
-     * 2. 支持多种开源模型（Llama、Qwen、Gemma 等）
-     * 3. 免费使用
-     *
-     * @param config 配置信息（只需要 baseUrl）
-     * @return Ollama 客户端包装器
-     */
-    private ChatClientWrapper createOllamaWrapper(LlmProviderConfigDTO config) {
-        // 创建 Ollama API 客户端（不需要 API Key）
-        OllamaApi api = new OllamaApi(config.getBaseUrl());
-        OllamaChatClient client = new OllamaChatClient(api);
-
-        // 返回匿名内部类实现的包装器
-        return new ChatClientWrapper() {
-            @Override
-            public ChatResponse call(Prompt prompt) {
-                return client.call(prompt);
-            }
-            @Override
-            public Flux<ChatResponse> stream(Prompt prompt) {
-                return client.stream(prompt);
-            }
-        };
+        return strategies.stream()
+                .filter(s -> s.supports(config.getProviderType()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("不支持的提供商类型: " + config.getProviderType()))
+                .createClient(config);
     }
 
     // ==================== 私有方法：Redis 数据访问 ====================

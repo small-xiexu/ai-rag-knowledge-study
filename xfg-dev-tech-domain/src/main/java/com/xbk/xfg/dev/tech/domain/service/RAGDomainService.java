@@ -14,7 +14,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
-import org.springframework.ai.vectorstore.PgVectorStore;
+import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.core.io.PathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

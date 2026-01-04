@@ -575,8 +575,9 @@
             currentEventSource.onmessage = function(event) {
                 try {
                     const data = JSON.parse(event.data);
-                    if (data.result?.output?.content) {
-                        fullContent += data.result.output.content;
+                    // Spring AI 1.0.0-M6 changed from 'content' to 'text'
+                    if (data.result?.output?.text) {
+                        fullContent += data.result.output.text;
                         updateLastAIMessage(filterContent(fullContent));
                         scrollToBottom();
                     }

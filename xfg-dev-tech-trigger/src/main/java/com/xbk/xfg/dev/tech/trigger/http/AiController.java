@@ -4,7 +4,7 @@ import com.xbk.xfg.dev.tech.api.IAiService;
 import com.xbk.xfg.dev.tech.domain.service.AiDomainService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.ChatResponse;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 

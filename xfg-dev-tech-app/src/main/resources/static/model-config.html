@@ -169,10 +169,13 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">提供商类型 *</label>
                     <select id="providerType" required onchange="onProviderTypeChange()"
                         class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
-                        <option value="OPENAI">OpenAI (兼容)</option>
-                        <option value="OLLAMA">Ollama (本地)</option>
-                        <option value="ANTHROPIC">Anthropic (Claude)</option>
+                        <option value="OPENAI">OpenAI - 官方或兼容 API (GPT系列)</option>
+                        <option value="OLLAMA">Ollama - 本地部署模型</option>
+                        <option value="ANTHROPIC">Anthropic - 官方或兼容 API (Claude系列)</option>
+                        <option value="GLM">GLM - 智谱 OpenAI 兼容 API</option>
+                        <option value="VERTEX_AI">Vertex AI - Google Cloud (Gemini系列)</option>
                     </select>
+                    <p class="text-xs text-gray-500 mt-1" id="providerHint">支持 OpenAI 兼容的 API 接口</p>
                 </div>
                 
                 <div>
@@ -193,14 +196,15 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">默认模型</label>
                     <input type="text" id="defaultModel"
                         class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                        placeholder="例如：gpt-4o, claude-3-opus">
+                        placeholder="例如：gpt-4o, claude-3-5-sonnet-20241022">
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">模型列表 (逗号分隔)</label>
-                    <input type="text" id="models"
-                        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                        placeholder="gpt-4o, gpt-3.5-turbo, claude-3-opus">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">模型列表</label>
+                    <textarea id="models" rows="3"
+                        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
+                        placeholder="每行一个模型名称，例如：gpt-4o、claude-3-5-sonnet"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">手动输入模型名称，每行一个</p>
                 </div>
                 
                 <div class="flex gap-3 pt-4">
@@ -225,7 +229,16 @@
         const providerLabels = {
             'OPENAI': { label: 'OpenAI', color: 'bg-green-100 text-green-700' },
             'OLLAMA': { label: 'Ollama', color: 'bg-blue-100 text-blue-700' },
-            'ANTHROPIC': { label: 'Anthropic', color: 'bg-purple-100 text-purple-700' }
+            'ANTHROPIC': { label: 'Claude', color: 'bg-purple-100 text-purple-700' },
+            'GLM': { label: 'GLM', color: 'bg-amber-100 text-amber-700' }
+        };
+
+        // 提供商提示信息
+        const providerHints = {
+            'OPENAI': '支持 OpenAI 官方和兼容 API（如代理服务）',
+            'OLLAMA': '本地部署，无需 API Key，只需填写本地地址（如 http://127.0.0.1:11434）',
+            'ANTHROPIC': 'Claude 系列模型，可通过代理服务访问',
+            'GLM': '智谱清言，支持 ChatGLM 系列模型'
         };
 
         // 加载配置列表
@@ -395,7 +408,14 @@
         function onProviderTypeChange() {
             const type = document.getElementById('providerType').value;
             const apiKeyField = document.getElementById('apiKeyField');
+            const hint = document.getElementById('providerHint');
             
+            // 更新提示
+            if (hint && providerHints[type]) {
+                hint.textContent = providerHints[type];
+            }
+            
+            // Ollama 不需要 API Key
             if (type === 'OLLAMA') {
                 apiKeyField.classList.add('hidden');
             } else {
@@ -415,7 +435,7 @@
             document.getElementById('baseUrl').value = config.baseUrl;
             document.getElementById('apiKey').value = config.apiKey || '';
             document.getElementById('defaultModel').value = config.defaultModel || '';
-            document.getElementById('models').value = (config.models || []).join(', ');
+            document.getElementById('models').value = (config.models || []).join('\\n');
             
             onProviderTypeChange();
             document.getElementById('configModal').classList.remove('hidden');
@@ -427,7 +447,8 @@
 
             const id = document.getElementById('configId').value;
             const modelsStr = document.getElementById('models').value;
-            const models = modelsStr ? modelsStr.split(',').map(m => m.trim()).filter(m => m) : [];
+            // 支持逗号和换行分隔
+            const models = modelsStr ? modelsStr.split(/[,\n]/).map(m => m.trim()).filter(m => m) : [];
 
             const config = {
                 name: document.getElementById('configName').value,

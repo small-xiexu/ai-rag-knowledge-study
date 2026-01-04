@@ -7,7 +7,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /**
  * @author xiexu
  */
-@SpringBootApplication
+@SpringBootApplication(exclude = {
+    org.springframework.ai.autoconfigure.vertexai.gemini.VertexAiGeminiAutoConfiguration.class
+})
 @Configurable
 public class Application {
 

@@ -4,14 +4,14 @@ import com.xbk.xfg.dev.tech.domain.factory.DynamicChatClientFactory;
 import com.xbk.xfg.dev.tech.domain.factory.DynamicChatClientFactory.ChatClientWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.ChatResponse;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.vectorstore.PgVectorStore;
+import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -66,14 +66,16 @@ public class AiDomainService {
                 {documents}
                 """;
 
-        SearchRequest request = SearchRequest.query(message)
-                .withTopK(5)
-                .withFilterExpression("knowledge == '" + ragTag + "'");
+        SearchRequest request = SearchRequest.builder()
+                .query(message)
+                .topK(5)
+                .filterExpression("knowledge == '" + ragTag + "'")
+                .build();
 
         List<Document> documents = pgVectorStore.similaritySearch(request);
 
         String documentCollectors = documents.stream()
-                .map(Document::getContent)
+                .map(Document::getText)
                 .collect(Collectors.joining("\n"));
 
         Message ragMessage = new SystemPromptTemplate(SYSTEM_PROMPT)
@@ -102,8 +104,8 @@ public class AiDomainService {
         }
         
         if ("OLLAMA".equalsIgnoreCase(providerType)) {
-            return org.springframework.ai.ollama.api.OllamaOptions.create().withModel(actualModel);
+            return org.springframework.ai.ollama.api.OllamaOptions.builder().model(actualModel).build();
         }
-        return OpenAiChatOptions.builder().withModel(actualModel).build();
+        return OpenAiChatOptions.builder().model(actualModel).build();
     }
 }
