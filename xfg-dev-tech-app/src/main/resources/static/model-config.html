@@ -420,12 +420,7 @@
                         </div>
                         
                         <div class="flex items-center gap-2 pt-3 border-t border-gray-100">
-                            ${!config.active ? `
-                                <button onclick="activateConfig('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
-                                    激活
-                                </button>
-                            ` : ''}
-                            <button id="test-btn-${config.id}" onclick="testConnection('${config.id}')" class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors" title="测试连接">
+                            <button id="test-btn-${config.id}" onclick="testConnection('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors" title="测试连接">
                                 测试
                             </button>
                             <button onclick="editConfig('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
@@ -568,22 +563,7 @@
             }
         }
 
-        // 激活配置
-        async function activateConfig(id) {
-            try {
-                const response = await fetch(`${API_BASE}/configs/${id}/activate`, { method: 'POST' });
-                const result = await response.json();
 
-                if (result.code === '0000') {
-                    loadConfigs();
-                } else {
-                    alert(result.info || '激活失败');
-                }
-            } catch (error) {
-                console.error('激活失败:', error);
-                alert('网络错误，激活失败');
-            }
-        }
 
         // 测试连接
         async function testConnection(id) {
