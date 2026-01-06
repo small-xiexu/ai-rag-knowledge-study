@@ -68,11 +68,11 @@ public class ApiLogAspect {
         } finally {
             long costTime = System.currentTimeMillis() - startTime;
             
-            // 单行日志格式: [HTTP方法 路径] IP | 耗时 | 方法名 | 请求 | 响应
-            log.info("[{} {}] {} | {}ms | {} | request={} | response={}",
+            // 单行日志格式: 带字段名，方便 ELK 索引
+            log.info("method={} path={} ip={} duration={}ms method_name={} request={} response={}",
                     httpMethod, path, ip, costTime, methodName,
                     truncate(params, 100),
-                    truncate(responseStr, 200));
+                    truncateJson(responseStr, 1000));
         }
         
         return result;
@@ -113,6 +113,78 @@ public class ApiLogAspect {
         if (str == null) return "null";
         if (str.length() <= maxLen) return str;
         return str.substring(0, maxLen) + "...";
+    }
+    
+    /**
+     * 智能截断 JSON，保证截断后仍是有效的 JSON 格式
+     */
+    private String truncateJson(String jsonStr, int maxLen) {
+        if (jsonStr == null) return "null";
+        if (jsonStr.length() <= maxLen) return jsonStr;
+        
+        try {
+            Object obj = JSON.parse(jsonStr);
+            return truncateJsonObject(obj, maxLen);
+        } catch (Exception e) {
+            // 不是有效 JSON，使用普通截断
+            return truncate(jsonStr, maxLen);
+        }
+    }
+    
+    /**
+     * 递归截断 JSON 对象
+     */
+    private String truncateJsonObject(Object obj, int maxLen) {
+        if (obj == null) return "null";
+        
+        if (obj instanceof com.alibaba.fastjson.JSONObject) {
+            com.alibaba.fastjson.JSONObject jsonObj = (com.alibaba.fastjson.JSONObject) obj;
+            com.alibaba.fastjson.JSONObject result = new com.alibaba.fastjson.JSONObject(true);
+            
+            for (String key : jsonObj.keySet()) {
+                Object value = jsonObj.get(key);
+                // 对嵌套对象/数组进行截断
+                if (value instanceof String) {
+                    String strVal = (String) value;
+                    result.put(key, strVal.length() > 100 ? strVal.substring(0, 100) + "..." : strVal);
+                } else if (value instanceof com.alibaba.fastjson.JSONArray) {
+                    com.alibaba.fastjson.JSONArray arr = (com.alibaba.fastjson.JSONArray) value;
+                    if (arr.size() > 3) {
+                        com.alibaba.fastjson.JSONArray truncatedArr = new com.alibaba.fastjson.JSONArray();
+                        for (int i = 0; i < 3; i++) {
+                            truncatedArr.add(arr.get(i));
+                        }
+                        truncatedArr.add("...[" + (arr.size() - 3) + " more]");
+                        result.put(key, truncatedArr);
+                    } else {
+                        result.put(key, value);
+                    }
+                } else {
+                    result.put(key, value);
+                }
+                
+                // 检查当前长度
+                String currentJson = result.toJSONString();
+                if (currentJson.length() > maxLen) {
+                    result.put(key, "...[truncated]");
+                    break;
+                }
+            }
+            return result.toJSONString();
+        } else if (obj instanceof com.alibaba.fastjson.JSONArray) {
+            com.alibaba.fastjson.JSONArray arr = (com.alibaba.fastjson.JSONArray) obj;
+            if (arr.size() > 5) {
+                com.alibaba.fastjson.JSONArray truncatedArr = new com.alibaba.fastjson.JSONArray();
+                for (int i = 0; i < 5; i++) {
+                    truncatedArr.add(arr.get(i));
+                }
+                truncatedArr.add("...[" + (arr.size() - 5) + " more]");
+                return truncatedArr.toJSONString();
+            }
+            return arr.toJSONString();
+        }
+        
+        return JSON.toJSONString(obj);
     }
 
     /**
