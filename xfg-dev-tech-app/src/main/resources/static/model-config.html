@@ -74,9 +74,89 @@
             font-size: 0.65rem;
             padding: 2px 8px;
         }
+
+        /* Toast 提示样式 */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+            backdrop-filter: blur(10px);
+            max-width: 400px;
+        }
+
+        .toast-success {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+            color: white;
+        }
+
+        .toast-error {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
+            color: white;
+        }
+
+        .toast-icon {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .toast-message {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .toast-close {
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .toast-close:hover {
+            opacity: 1;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+        }
     </style>
 </head>
 <body class="flex items-center justify-center p-4">
+    <!-- Toast 容器 -->
+    <div id="toastContainer" class="toast-container"></div>
+
     <div class="glass-card rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden">
         <!-- 头部 -->
         <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-8 py-6">
@@ -173,7 +253,8 @@
                         <option value="OLLAMA">Ollama - 本地部署模型</option>
                         <option value="ANTHROPIC">Anthropic - 官方或兼容 API (Claude系列)</option>
                         <option value="GLM">GLM - 智谱 OpenAI 兼容 API</option>
-                        <option value="VERTEX_AI">Vertex AI - Google Cloud (Gemini系列)</option>
+                        <option value="DEEPSEEK">DeepSeek - 深度求索 OpenAI 兼容 API</option>
+                        <option value="GEMINI">Gemini - Google AI Studio</option>
                     </select>
                     <p class="text-xs text-gray-500 mt-1" id="providerHint">支持 OpenAI 兼容的 API 接口</p>
                 </div>
@@ -230,7 +311,9 @@
             'OPENAI': { label: 'OpenAI', color: 'bg-green-100 text-green-700' },
             'OLLAMA': { label: 'Ollama', color: 'bg-blue-100 text-blue-700' },
             'ANTHROPIC': { label: 'Claude', color: 'bg-purple-100 text-purple-700' },
-            'GLM': { label: 'GLM', color: 'bg-amber-100 text-amber-700' }
+            'GLM': { label: 'GLM', color: 'bg-amber-100 text-amber-700' },
+            'DEEPSEEK': { label: 'DeepSeek', color: 'bg-sky-100 text-sky-700' },
+            'GEMINI': { label: 'Gemini', color: 'bg-red-100 text-red-700' }
         };
 
         // 提供商提示信息
@@ -238,7 +321,9 @@
             'OPENAI': '支持 OpenAI 官方和兼容 API（如代理服务）',
             'OLLAMA': '本地部署，无需 API Key，只需填写本地地址（如 http://127.0.0.1:11434）',
             'ANTHROPIC': 'Claude 系列模型，可通过代理服务访问',
-            'GLM': '智谱清言，支持 ChatGLM 系列模型'
+            'GLM': '智谱清言，支持 ChatGLM 系列模型',
+            'DEEPSEEK': 'DeepSeek，支持 deepseek-chat、deepseek-reasoner 等模型',
+            'GEMINI': 'Google Gemini，支持 gemini-2.0-flash、gemini-1.5-pro 等模型'
         };
 
         // 加载配置列表
@@ -520,18 +605,48 @@
 
                 if (result.code === '0000' && result.data === true) {
                     btn.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                    showToast('success', `「${config.name}」连接测试成功！`);
                     setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
                 } else {
-                    alert('连接失败: ' + (result.info || '未知错误'));
+                    showToast('error', `「${config.name}」连接失败: ${result.info || '未知错误'}`);
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
             } catch (error) {
                 console.error('测试失败:', error);
-                alert('网络错误，测试失败');
+                showToast('error', `「${config.name}」网络错误，测试失败`);
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
+        }
+
+        // Toast 提示函数
+        function showToast(type, message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            const icon = type === 'success' 
+                ? `<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                : `<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            
+            toast.innerHTML = `
+                ${icon}
+                <span class="toast-message">${escapeHtml(message)}</span>
+                <svg class="toast-close w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" onclick="this.parentElement.remove()">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            `;
+            
+            container.appendChild(toast);
+            
+            // 5秒后自动消失
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.style.animation = 'slideOut 0.3s ease-out forwards';
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 5000);
         }
 
         // 删除配置

@@ -3,11 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat</title>
-    <!-- Favicon - ChatGPT 风格图标 -->
+    <title>AI 助手 - 智能对话系统</title>
+    <!-- Tailwind CSS -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2310a37f'/%3E%3Cstop offset='100%25' stop-color='%231a7f64'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='url(%23g)'/%3E%3Cpath d='M50 25 L50 50 L70 60' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='50' cy='50' r='8' fill='white'/%3E%3Ccircle cx='30' cy='40' r='5' fill='white' opacity='0.7'/%3E%3Ccircle cx='70' cy='40' r='5' fill='white' opacity='0.7'/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Markdown & Highlight CDNs -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -19,7 +26,7 @@
             }
         }
     </script>
-<style>
+    <style>
         * {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
@@ -48,11 +55,30 @@
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* Markdown 样式覆盖 */
+        .prose pre { margin: 0; padding: 0; background: transparent; }
+        .prose :where(code):not(:where([class~="not-prose"] *)) { color: inherit; font-weight: 500; }
+        .prose :where(code):not(:where([class~="not-prose"] *))::before { content: ""; }
+        .prose :where(code):not(:where([class~="not-prose"] *))::after { content: ""; }
+        .prose p { margin-bottom: 0.5em; margin-top: 0.5em; }
+        .prose ul, .prose ol { margin-bottom: 0.5em; margin-top: 0.5em; padding-left: 1.5em; }
+        .prose li { margin: 0; }
+        
+        /* 代码块样式 */
+        .hljs-container { position: relative; border-radius: 0.5rem; overflow: hidden; margin: 0.5rem 0; background: #282c34; }
+        .hljs-header { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.25rem 0.75rem; background: #21252b; color: #abb2bf; font-size: 0.75rem;
+            border-bottom: 1px solid #181a1f;
+        }
+        .hljs-body { padding: 0.75rem; overflow-x: auto; }
+        .hljs { background: transparent !important; padding: 0 !important; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen py-8 px-4 overflow-hidden">
     <!-- 主卡片 -->
-    <div class="glass-card flex w-full max-w-6xl h-[85vh] rounded-3xl overflow-hidden shadow-2xl relative">
+    <div class="glass-card flex w-full max-w-7xl h-[90vh] rounded-3xl overflow-hidden shadow-2xl relative">
         <!-- 侧边栏 -->
         <aside id="sidebar" class="w-64 bg-gray-50/50 border-r border-gray-100 flex flex-col backdrop-blur-sm">
             <!-- Logo -->
@@ -136,7 +162,7 @@
         <!-- 主区域 -->
         <main class="flex-1 flex flex-col bg-white/60 relative">
             <!-- 头部 -->
-            <header class="h-16 px-8 flex items-center justify-between border-b border-gray-100/50 bg-white/40 backdrop-blur-sm z-10">
+            <header class="h-16 px-6 flex items-center justify-between border-b border-gray-100/50 bg-white/40 backdrop-blur-sm z-10">
                 <div class="flex items-center gap-4">
                     <button onclick="toggleSidebar()" class="lg:hidden w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors">
                         <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,14 +194,14 @@
             </div>
 
             <!-- 输入区域 -->
-            <div class="px-8 py-6 bg-white/40 backdrop-blur-sm border-t border-gray-100/50">
-                <div class="flex gap-4 items-end max-w-4xl mx-auto">
-                    <div class="flex-1 relative group">
+            <div class="px-6 py-6 bg-white/40 backdrop-blur-sm border-t border-gray-100/50">
+                <div class="flex gap-4 items-center max-w-2xl mx-auto">
+                    <div class="flex-1 relative group flex items-center">
                         <textarea 
                             id="messageInput" 
                             placeholder="输入消息，按下 Enter 发送..." 
                             rows="1"
-                            class="w-full min-h-[52px] max-h-32 px-5 py-3.5 bg-white border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm leading-relaxed overflow-hidden"
+                            class="w-full min-h-[56px] max-h-32 px-5 py-4 bg-white border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm leading-relaxed overflow-hidden"
                             onkeydown="handleKeyDown(event)"
                             oninput="autoResize(this)"
                         ></textarea>
@@ -183,7 +209,7 @@
                     <button 
                         id="sendButton"
                         onclick="sendMessage()" 
-                        class="w-14 h-[52px] bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl transition-all shadow-lg hover:shadow-indigo-500/30 flex items-center justify-center flex-shrink-0 active:scale-95"
+                        class="w-14 h-14 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl transition-all shadow-lg hover:shadow-indigo-500/30 flex items-center justify-center flex-shrink-0 active:scale-95"
                     >
                         <svg id="sendIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/>
@@ -221,6 +247,35 @@
         let isGenerating = false;
         let currentEventSource = null;
         let contextMenuChatId = null;
+
+        // Custom Renderer for Marked
+        const renderer = new marked.Renderer();
+        renderer.code = function(code, language) {
+            // Fix: Check hljs globally instead of highlight which caused errors
+            const validLang = !!(language && typeof hljs !== 'undefined' && hljs.getLanguage(language));
+            const highlighted = validLang && typeof hljs !== 'undefined'
+                ? hljs.highlight(code, { language }).value 
+                : (typeof hljs !== 'undefined' ? hljs.highlightAuto(code).value : code);
+            const langShow = validLang ? language : 'text';
+            
+            return `<div class="hljs-container group">
+                <div class="hljs-header">
+                    <span class="font-mono">${langShow}</span>
+                    <button onclick="copyCode(this)" class="opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-white cursor-pointer flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        复制
+                    </button>
+                    <div class="hidden code-content">${encodeURIComponent(code)}</div>
+                </div>
+                <div class="hljs-body"><pre><code class="hljs ${language}">${highlighted}</code></pre></div>
+            </div>`;
+        };
+        
+        marked.setOptions({
+            renderer: renderer,
+            breaks: true,
+            gfm: true
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             const savedChats = localStorage.getItem('ai-chats-v2');
@@ -334,10 +389,10 @@
 
         function clearAllChats() {
             if (chats.length === 0) {
-                alert('暂无对话可清空');
+                // alert('暂无对话可清空'); // Optional: remove alert too if strictly "no inquiries"
                 return;
             }
-            if (!confirm(`确定要清空所有 ${chats.length} 个对话吗？此操作不可恢复！`)) return;
+            // Force clear without confirm
             chats = [];
             currentChatId = null;
             saveChats();
@@ -356,7 +411,7 @@
 
         function deleteChat() {
             hideContextMenu();
-            if (!contextMenuChatId || !confirm('确定删除？')) return;
+            if (!contextMenuChatId) return;
             chats = chats.filter(c => c.id !== contextMenuChatId);
             saveChats();
             renderChatList();
@@ -434,7 +489,7 @@
         }
 
         function deleteChatById(chatId) {
-            if (!confirm('确定删除？')) return;
+            // Simply delete without confirmation
             chats = chats.filter(c => c.id !== chatId);
             saveChats();
             renderChatList();
@@ -462,17 +517,37 @@
                 return;
             }
             
-            container.innerHTML = `<div class="py-6 px-6 space-y-4">` + 
-                chat.messages.map((msg, i) => `
-                    <div class="message-enter flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}">
-                        <div class="${msg.role === 'user' 
-                            ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl rounded-br-md px-4 py-3 max-w-[70%] shadow-md' 
-                            : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-md px-4 py-3 max-w-[70%] shadow-sm'}">
-                            <p class="text-sm leading-relaxed whitespace-pre-wrap" id="msg-${i}">${escapeHtml(msg.content)}</p>
+            container.innerHTML = `<div class="py-6 px-6 space-y-6">` + 
+                chat.messages.map((msg, i) => {
+                    const isUser = msg.role === 'user';
+                    // 用户消息只做简单转义，AI 消息做 Markdown 渲染
+                    // 再次过滤，确保安全
+                    const filteredContent = isUser ? msg.content : filterContent(msg.content, false); 
+                    const contentHtml = isUser ? escapeHtml(msg.content) : marked.parse(filteredContent);
+                    
+                    return `
+                    <div id="msg-${i}" class="message-enter flex flex-col ${isUser ? 'items-end' : 'items-start'} group">
+                        <div class="${isUser 
+                            ? 'w-fit max-w-[75%] bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl rounded-br-md px-4 py-2.5 shadow-md text-sm' 
+                            : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-3xl shadow-sm prose prose-sm prose-slate break-words text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0'}">
+                             <div id="msg-content-${i}" class="${isUser ? 'whitespace-pre-wrap leading-relaxed' : ''}">${contentHtml}</div>
                         </div>
-                    </div>
-                `).join('') + `</div>`;
+                        <div class="flex items-center gap-2 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 select-none">
+                            <span class="text-[10px] text-gray-400">${formatTime(msg.timestamp)}</span>
+                            <button onclick="copyText(this)" class="text-[10px] text-gray-400 hover:text-indigo-500 flex items-center gap-0.5 transition-colors" data-content="${encodeURIComponent(msg.content)}">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                                复制
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('') + `</div>`;
             scrollToBottom();
+        }
+
+        function formatTime(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            return date.toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
 
         function addMessage(role, content) {
@@ -490,145 +565,253 @@
         function updateLastAIMessage(content) {
             const chat = chats.find(c => c.id === currentChatId);
             if (!chat) return;
-            const lastMsg = chat.messages[chat.messages.length - 1];
+            const lastMsgIndex = chat.messages.length - 1;
+            const lastMsg = chat.messages[lastMsgIndex];
+            
             if (lastMsg?.role === 'assistant') {
                 lastMsg.content = content;
-                saveChats();
-                const msgEl = document.getElementById(`msg-${chat.messages.length - 1}`);
-                if (msgEl) msgEl.textContent = content;
+                // saveChats(); // 减少IO频率，可以放在流结束时保存
+                
+                // 局部更新 DOM，防止闪烁
+                const contentDiv = document.getElementById(`msg-content-${lastMsgIndex}`);
+                if (contentDiv) {
+                    contentDiv.innerHTML = marked.parse(filterContent(content));
+                    // 这里不需要 scrollToBottom，除非是大量内容，且用户已在底部
+                    // scrollToBottom(); 
+                } else {
+                    renderMessages(); 
+                }
             }
+        }
+        
+        // 复制代码
+        function copyCode(btn) {
+            const contentDiv = btn.parentElement.querySelector('.code-content');
+            const code = decodeURIComponent(contentDiv.innerText);
+            navigator.clipboard.writeText(code).then(() => {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<svg class="w-3 h-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> 已复制`;
+                setTimeout(() => btn.innerHTML = originalHtml, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('复制失败');
+            });
+        }
+
+        // 复制全文
+        function copyText(btn) {
+            const content = decodeURIComponent(btn.dataset.content);
+            navigator.clipboard.writeText(content).then(() => {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> 已复制`;
+                setTimeout(() => btn.innerHTML = originalHtml, 2000);
+            });
         }
 
         function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             if (!message || isGenerating) return;
+
+            if (document.getElementById('configSelect').options.length === 0) {
+              alert('请先去模型配置页面添加并激活一个配置！');
+              return;
+            }
+
+            input.value = '';
+            input.style.height = 'auto';
+            input.focus();
+
             if (!currentChatId) createNewChat();
+
             addMessage('user', message);
             renderMessages();
-            input.value = '';
-            autoResize(input);
-            addMessage('assistant', '');
+
+            isGenerating = true;
+            updateSendButton();
+            addMessage('assistant', ''); 
             renderMessages();
+
             startStreamRequest(message);
         }
 
-        // 根据配置更新模型选项
         function updateModelOptions(config) {
-            const modelSelect = document.getElementById('modelSelect');
-            modelSelect.innerHTML = '';
+            const select = document.getElementById('modelSelect');
+            select.innerHTML = '';
             
-            let models = config.models || [];
-            // 如果从 dataset 传过来可能已经是数组，如果是对象（loadConfigs调用）则取属性
-            // 注意：switchConfig 中从 dataset 取出的是 context，可能需要重新处理
-            
-            // 简单处理：如果是字符串数组
-            if (Array.isArray(config.models)) {
-                 models = config.models;
-            } else if (config.models && typeof config.models === 'string') {
-                 // 这种情况不太可能发生，除非数据结构变了
-                 models = config.models.split(',');
-            }
-            
-            if (models.length === 0) {
-                 // 如果没有配置模型列表，给几个默认的或者允许自由输入（这里暂时给个提示）
-                 const option = document.createElement('option');
-                 option.value = config.defaultModel || 'gpt-3.5-turbo';
-                 option.textContent = (config.defaultModel || 'gpt-3.5-turbo') + ' (默认)';
-                 modelSelect.appendChild(option);
-            } else {
-                models.forEach(model => {
-                    const m = model.trim();
-                    if (!m) return;
+            if (config.models && config.models.length > 0) {
+                config.models.forEach(model => {
                     const option = document.createElement('option');
-                    option.value = m;
-                    option.textContent = m;
-                    if (config.defaultModel && m === config.defaultModel) {
-                        option.selected = true;
-                    }
-                    modelSelect.appendChild(option);
+                    option.value = model;
+                    option.textContent = model;
+                    select.appendChild(option);
                 });
+                
+                if (config.defaultModel && config.models.includes(config.defaultModel)) {
+                    select.value = config.defaultModel;
+                }
+            } else {
+                select.innerHTML = '<option value="">默认模型</option>';
             }
         }
 
         function startStreamRequest(message) {
-            isGenerating = true;
-            updateSendButton();
-            const model = document.getElementById('modelSelect').value;
             const ragTag = document.getElementById('ragTagSelect').value;
+            const model = document.getElementById('modelSelect').value; 
             
-            // 使用统一的动态 AI 端点
-            const baseUrl = '/api/v1/ai';
-            let apiUrl;
-            
-            if (ragTag) {
-                // RAG 模式：使用知识库检索增强
-                apiUrl = `${baseUrl}/generate_stream_rag?model=${encodeURIComponent(model)}&ragTag=${encodeURIComponent(ragTag)}&message=${encodeURIComponent(message)}`;
-            } else {
-                // 普通模式：直接对话
-                apiUrl = `${baseUrl}/generate_stream?model=${encodeURIComponent(model)}&message=${encodeURIComponent(message)}`;
-            }
-            
+            const url = ragTag 
+                ? `/api/v1/rag/generate_stream_rag?ragTag=${encodeURIComponent(ragTag)}&message=${encodeURIComponent(message)}&model=${encodeURIComponent(model)}`
+                : `/api/v1/ai/generate_stream?message=${encodeURIComponent(message)}&model=${encodeURIComponent(model)}`;
+
+            currentEventSource = new EventSource(url);
             let fullContent = '';
-            currentEventSource = new EventSource(apiUrl);
-            
-            currentEventSource.onmessage = function(event) {
-                try {
-                    const data = JSON.parse(event.data);
-                    // Spring AI 1.0.0-M6 changed from 'content' to 'text'
-                    if (data.result?.output?.text) {
-                        fullContent += data.result.output.text;
-                        updateLastAIMessage(filterContent(fullContent));
-                        scrollToBottom();
+
+            currentEventSource.onmessage = (event) => {
+                const rawData = event.data;
+                // Fix: Robust JSON stream parsing
+                // Split concatenated JSON objects directly if they appear as `}{`
+                // This is a common issue with some stream buffers or proxies
+                let chunks = [];
+                let start = 0;
+                while (start < rawData.length) {
+                     let end = rawData.indexOf('}{', start);
+                     if (end === -1) end = rawData.length;
+                     else end += 1; // Include the closing brace
+                     chunks.push(rawData.substring(start, end));
+                     start = end;
+                }
+
+                chunks.forEach(data => {
+                    try {
+                        const parsed = JSON.parse(data);
+                        // Recursively extracting text
+                        function extractContent(obj) {
+                            if (typeof obj === 'string') return obj;
+                            if (!obj || typeof obj !== 'object') return '';
+                            
+                            // Top priority fields
+                            if (obj.text) return obj.text;
+                            if (obj.content) return obj.content;
+                            
+                            // Nested fields
+                            if (obj.output) return extractContent(obj.output);
+                            if (obj.result) return extractContent(obj.result);
+                            if (obj.data) return extractContent(obj.data);
+                            // OpenAI style
+                            if (obj.choices && obj.choices[0]) return extractContent(obj.choices[0].delta || obj.choices[0].message);
+                            
+                            return ''; // Don't return JSON string fallback, it causes raw JSON display
+                        }
+
+                        const content = extractContent(parsed);
+                        if (content) {
+                            fullContent += content;
+                        }
+                    } catch (e) {
+                        // If parse fails, it might be raw text or special signals
+                        if (data !== '[DONE]') {
+                             // Only append if it looks like safe text, avoiding partial JSON fragments
+                             if (!data.trim().startsWith('{') && !data.trim().startsWith('}')) {
+                                fullContent += data;
+                             }
+                        }
                     }
-                    if (data.result?.metadata?.finishReason === 'STOP') {
-                        updateLastAIMessage(filterContent(fullContent).trim());
-                        stopGeneration();
-                    }
-                } catch (e) { console.error('Parse error:', e); }
+                });
+                updateLastAIMessage(fullContent);
+                // 自动滚动到底部 (可选：当用户没有向上滚动时)
+                scrollToBottom();
             };
-            
-            currentEventSource.onerror = function() {
+
+            currentEventSource.onerror = (err) => {
+                console.error('Stream Error:', err);
                 stopGeneration();
-                if (!fullContent) updateLastAIMessage('请求出错，请重试。提示：请先在模型配置页面添加并激活一个配置。');
             };
         }
 
-        function filterContent(text) {
-            let f = text.replace(/<think>[\s\S]*?<\/think>/g, '');
-            const ts = f.indexOf('<think>');
-            if (ts !== -1 && f.indexOf('</think>', ts) === -1) f = f.substring(0, ts);
-            f = f.replace(/<\/?think>/g, '');
-            f = f.replace(/\*\*([^*]+)\*\*/g, '$1');
-            f = f.replace(/__([^_]+)__/g, '$1');
-            f = f.replace(/(?<![0-9])\*([^*\n]+)\*(?![0-9])/g, '$1');
-            f = f.replace(/`([^`]+)`/g, '$1');
-            f = f.replace(/^#{1,6}\s+/gm, '');
-            return f.replace(/^\s*\n+/, '');
+        // 过滤 <think> 内容，但保留 Markdown 格式
+        function filterContent(content, isRendering) {
+             if (!content) return '';
+             // 只替换 <think> 标签块，保留其他所有字符
+             // 1. 如果有完整的 <think>...</think>，去掉它
+             let result = content.replace(/<think>[\s\S]*?<\/think>/g, '');
+             
+             // 2. 如果只有开始标签 <think>（流式未结束），去掉开始标签及之后的所有内容
+             const thinkStart = result.indexOf('<think>');
+             if (thinkStart !== -1) {
+                 result = result.substring(0, thinkStart);
+             }
+             
+             // 3. 简单的标签清理（以防万一），但不要误伤 Markdown
+             // 移除孤立的标签
+             result = result.replace(/<\/?think>/g, '');
+             
+             return result;
         }
-
+        
         function stopGeneration() {
-            if (currentEventSource) { currentEventSource.close(); currentEventSource = null; }
+            if (currentEventSource) {
+                currentEventSource.close();
+                currentEventSource = null;
+            }
             isGenerating = false;
+            saveChats(); // 生成停止时保存
             updateSendButton();
         }
 
         function updateSendButton() {
+            const sendIcon = document.getElementById('sendIcon');
+            const loadingIcon = document.getElementById('loadingIcon');
             const btn = document.getElementById('sendButton');
-            btn.disabled = isGenerating;
-            document.getElementById('sendIcon').classList.toggle('hidden', isGenerating);
-            document.getElementById('loadingIcon').classList.toggle('hidden', !isGenerating);
+            
+            if (isGenerating) {
+                sendIcon.classList.add('hidden');
+                loadingIcon.classList.remove('hidden');
+                btn.onclick = stopGeneration;
+                btn.classList.add('from-red-500', 'to-pink-600');
+                btn.classList.remove('from-indigo-500', 'to-purple-600');
+            } else {
+                sendIcon.classList.remove('hidden');
+                loadingIcon.classList.add('hidden');
+                btn.onclick = sendMessage;
+                btn.classList.remove('from-red-500', 'to-pink-600');
+                btn.classList.add('from-indigo-500', 'to-purple-600');
+            }
         }
 
-        function handleKeyDown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-        function autoResize(el) { 
-            el.style.height = 'auto'; 
-            el.style.height = Math.min(el.scrollHeight, 128) + 'px';
-            el.style.overflowY = el.scrollHeight > 128 ? 'auto' : 'hidden';
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
         }
-        function scrollToBottom() { const c = document.getElementById('messagesContainer'); c.scrollTop = c.scrollHeight; }
-        function toggleSidebar() { const s = document.getElementById('sidebar'); s.classList.toggle('hidden'); }
-        function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+            sidebar.classList.toggle('absolute');
+            sidebar.classList.toggle('z-20');
+            sidebar.classList.toggle('h-full');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
     </script>
 </body>
 </html>

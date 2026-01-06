@@ -343,6 +343,8 @@ public class DynamicChatClientFactory {
             case "OLLAMA" -> "llama3:8b";
             case "ANTHROPIC" -> "claude-3-5-sonnet-20241022";  // Claude 模型
             case "GLM" -> "glm-4";  // 智谱模型
+            case "DEEPSEEK" -> "deepseek-chat";  // DeepSeek 模型
+            case "GEMINI" -> "gemini-2.0-flash";  // Google Gemini 模型
             default -> "gpt-4o-mini";  // OpenAI 兼容的便宜模型
         };
     }

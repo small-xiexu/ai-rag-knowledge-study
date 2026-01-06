@@ -15,7 +15,7 @@ import reactor.core.publisher.Flux;
 /**
  * OpenAI 客户端创建策略
  * 
- * 支持 OpenAI 官方 API 和兼容服务（如 GLM、OneAPI 等）
+ * 支持 OpenAI 官方 API 和兼容服务（如 DeepSeek、GLM、Gemini、OneAPI 等）
  * 
  * 注意：baseUrl 应该配置到 /v1 层级，如：
  * - OpenAI 官方：https://api.openai.com/v1
@@ -32,7 +32,7 @@ public class OpenAiChatClientStrategy implements ChatClientStrategy {
     @Override
     public boolean supports(String providerType) {
         String type = providerType.toUpperCase();
-        return "OPENAI".equals(type) || "GLM".equals(type);
+        return "OPENAI".equals(type) || "GLM".equals(type) || "DEEPSEEK".equals(type) || "GEMINI".equals(type);
     }
 
     @Override

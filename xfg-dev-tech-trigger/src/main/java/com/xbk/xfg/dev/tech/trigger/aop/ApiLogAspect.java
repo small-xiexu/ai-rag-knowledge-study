@@ -14,7 +14,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import reactor.core.publisher.Flux;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.lang.reflect.Method;
 
 /**
  * API 日志切面
@@ -34,7 +33,7 @@ public class ApiLogAspect {
     }
 
     /**
-     * 环绕通知：记录请求和响应
+     * 环绕通知：记录请求和响应（单行日志格式）
      */
     @Around("apiPointcut()")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -46,53 +45,74 @@ public class ApiLogAspect {
         
         // 获取方法信息
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method method = signature.getMethod();
-        String className = joinPoint.getTarget().getClass().getSimpleName();
-        String methodName = method.getName();
+        String methodName = signature.getMethod().getName();
         
-        // 获取请求参数
-        Object[] args = joinPoint.getArgs();
-        String params = "";
-        try {
-            params = JSON.toJSONString(args);
-        } catch (Exception e) {
-            params = "参数序列化失败";
-        }
+        // 获取请求参数（简化处理）
+        String params = formatParams(joinPoint.getArgs());
         
-        // 打印请求日志
-        log.info("==================== API Request Start ====================");
-        log.info("URL         : {}", request != null ? request.getRequestURL().toString() : "N/A");
-        log.info("HTTP Method : {}", request != null ? request.getMethod() : "N/A");
-        log.info("Class       : {}", className);
-        log.info("Method      : {}", methodName);
-        log.info("IP          : {}", getIpAddr(request));
-        log.info("Params      : {}", params);
+        // HTTP 方法和路径
+        String httpMethod = request != null ? request.getMethod() : "N/A";
+        String path = request != null ? request.getRequestURI() : "N/A";
+        String ip = getIpAddr(request);
         
         // 执行目标方法
-        Object result = joinPoint.proceed();
+        Object result = null;
+        String responseStr = "[unknown]";
         
-        long costTime = System.currentTimeMillis() - startTime;
-        
-        // 打印响应日志（对于流式响应，只记录类型）
-        if (result instanceof Flux) {
-            log.info("Response    : [Flux Stream Response]");
-        } else {
-            try {
-                String resultJson = JSON.toJSONString(result);
-                // 限制日志长度，避免过长
-                if (resultJson.length() > 500) {
-                    resultJson = resultJson.substring(0, 500) + "...";
-                }
-                log.info("Response    : {}", resultJson);
-            } catch (Exception e) {
-                log.info("Response    : 响应序列化失败");
-            }
+        try {
+            result = joinPoint.proceed();
+            responseStr = formatResponse(result);
+        } catch (Exception e) {
+            responseStr = e.getClass().getSimpleName() + ": " + e.getMessage();
+            throw e;
+        } finally {
+            long costTime = System.currentTimeMillis() - startTime;
+            
+            // 单行日志格式: [HTTP方法 路径] IP | 耗时 | 方法名 | 请求 | 响应
+            log.info("[{} {}] {} | {}ms | {} | request={} | response={}",
+                    httpMethod, path, ip, costTime, methodName,
+                    truncate(params, 100),
+                    truncate(responseStr, 200));
         }
         
-        log.info("Cost Time   : {} ms", costTime);
-        log.info("==================== API Request End ======================\n");
-        
         return result;
+    }
+    
+    /**
+     * 格式化参数
+     */
+    private String formatParams(Object[] args) {
+        if (args == null || args.length == 0) {
+            return "[]";
+        }
+        try {
+            return JSON.toJSONString(args);
+        } catch (Exception e) {
+            return "[序列化失败]";
+        }
+    }
+    
+    /**
+     * 格式化响应
+     */
+    private String formatResponse(Object result) {
+        if (result instanceof Flux) {
+            return "[Flux Stream]";
+        }
+        try {
+            return JSON.toJSONString(result);
+        } catch (Exception e) {
+            return "[序列化失败]";
+        }
+    }
+    
+    /**
+     * 截断字符串
+     */
+    private String truncate(String str, int maxLen) {
+        if (str == null) return "null";
+        if (str.length() <= maxLen) return str;
+        return str.substring(0, maxLen) + "...";
     }
 
     /**
