@@ -37,12 +37,16 @@ public class OpenAiChatClientStrategy implements ChatClientStrategy {
 
     @Override
     public ChatClientWrapper createClient(LlmProviderConfigDTO config) {
-        log.info("创建 OpenAI 客户端: {}, baseUrl: {}", config.getName(), config.getBaseUrl());
+        // 规范化 baseUrl：去除末尾的 /chat/completions 和 /
+        // 这样无论用户输入 https://api.siliconflow.cn/v1 还是 
+        // https://api.siliconflow.cn/v1/chat/completions 都能正常工作
+        String baseUrl = normalizeBaseUrl(config.getBaseUrl());
+        log.info("创建 OpenAI 客户端: {}, baseUrl: {} (原始: {})", config.getName(), baseUrl, config.getBaseUrl());
         
         // 使用 builder 模式创建 OpenAiApi，设置 completionsPath 为 /chat/completions
         // 这样用户可以在 baseUrl 中完全控制路径（如 /openai/v1）
         OpenAiApi api = OpenAiApi.builder()
-                .baseUrl(config.getBaseUrl())
+                .baseUrl(baseUrl)
                 .apiKey(config.getApiKey())
                 .completionsPath("/chat/completions")
                 .build();
@@ -66,5 +70,34 @@ public class OpenAiChatClientStrategy implements ChatClientStrategy {
                 return chatModel.stream(prompt);
             }
         };
+    }
+
+    /**
+     * 规范化 baseUrl
+     * 自动去除末尾的 /chat/completions 和多余的斜杠
+     * 这样无论用户输入什么格式的 URL 都能正常工作
+     * 
+     * 例如：
+     * - https://api.siliconflow.cn/v1/chat/completions -> https://api.siliconflow.cn/v1
+     * - https://api.openai.com/v1/ -> https://api.openai.com/v1
+     */
+    private String normalizeBaseUrl(String url) {
+        if (url == null || url.isEmpty()) {
+            return url;
+        }
+        
+        String normalized = url.trim();
+        
+        // 去除末尾的 /chat/completions（不区分大小写）
+        if (normalized.toLowerCase().endsWith("/chat/completions")) {
+            normalized = normalized.substring(0, normalized.length() - "/chat/completions".length());
+        }
+        
+        // 去除末尾的斜杠
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        
+        return normalized;
     }
 }

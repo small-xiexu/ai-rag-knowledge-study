@@ -420,7 +420,12 @@
                         </div>
                         
                         <div class="flex items-center gap-2 pt-3 border-t border-gray-100">
-                            <button id="test-btn-${config.id}" onclick="testConnection('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors" title="测试连接">
+                            ${!config.active ? `
+                                <button onclick="activateConfig('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                                    激活
+                                </button>
+                            ` : ''}
+                            <button id="test-btn-${config.id}" onclick="testConnection('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors" title="测试连接">
                                 测试
                             </button>
                             <button onclick="editConfig('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
@@ -572,7 +577,7 @@
             
             const btn = document.getElementById(`test-btn-${id}`);
             const originalText = btn.innerHTML;
-            btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>`;
+            btn.innerHTML = `<div class="flex justify-center items-center"><svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg></div>`;
             btn.disabled = true;
 
             try {
@@ -584,7 +589,7 @@
                 const result = await response.json();
 
                 if (result.code === '0000' && result.data === true) {
-                    btn.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                    btn.innerHTML = `<div class="flex justify-center items-center"><svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>`;
                     showToast('success', `「${config.name}」连接测试成功！`);
                     setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
                 } else {
@@ -627,6 +632,27 @@
                     setTimeout(() => toast.remove(), 300);
                 }
             }, 5000);
+        }
+
+        // 激活配置
+        async function activateConfig(id) {
+            const config = configs.find(c => c.id === id);
+            if (!config) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/configs/${id}/activate`, { method: 'POST' });
+                const result = await response.json();
+
+                if (result.code === '0000') {
+                    showToast('success', `「${config.name}」已激活`);
+                    loadConfigs();
+                } else {
+                    showToast('error', result.info || '激活失败');
+                }
+            } catch (error) {
+                console.error('激活失败:', error);
+                showToast('error', '网络错误，激活失败');
+            }
         }
 
         // 删除配置
