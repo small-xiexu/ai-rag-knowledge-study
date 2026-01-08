@@ -1,5 +1,6 @@
 package com.xbk.xfg.dev.tech.api;
 
+import com.xbk.xfg.dev.tech.api.dto.EmbeddingActivationResultDTO;
 import com.xbk.xfg.dev.tech.api.dto.LlmProviderConfigDTO;
 import com.xbk.xfg.dev.tech.api.response.Response;
 
@@ -47,11 +48,23 @@ public interface ILlmConfigService {
      * @param id 配置ID
      */
     Response<Boolean> activateConfig(String id);
+
+    /**
+     * 激活指定的 Embedding 配置
+     * @param id 配置ID
+     * @param force 是否强制激活（维度不兼容时清空知识库）
+     */
+    Response<EmbeddingActivationResultDTO> activateEmbeddingConfig(String id, boolean force);
     
     /**
      * 获取当前激活的配置
      */
     Response<LlmProviderConfigDTO> getActiveConfig();
+
+    /**
+     * 获取当前激活的 Embedding 配置
+     */
+    Response<LlmProviderConfigDTO> getActiveEmbeddingConfig();
     
     /**
      * 测试配置连接

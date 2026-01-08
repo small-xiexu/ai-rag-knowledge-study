@@ -69,4 +69,21 @@ public class LlmProviderConfigDTO implements Serializable {
      * 更新时间
      */
     private LocalDateTime updatedAt;
+
+    // ========== Embedding 相关字段 ==========
+
+    /**
+     * Embedding 模型名称（可选，为空表示不支持 embedding）
+     */
+    private String embeddingModel;
+
+    /**
+     * Embedding 向量维度（embeddingModel 不为空时必填，用于维度兼容检测）
+     */
+    private Integer embeddingDimension;
+
+    /**
+     * 是否为激活的 Embedding 配置（独立于聊天模型激活状态）
+     */
+    private boolean activeForEmbedding;
 }

@@ -76,6 +76,12 @@ public class VectorStoreRepositoryImpl implements VectorStoreRepository {
     private static final String TRUNCATE_TABLE =
             "TRUNCATE TABLE vector_store";
 
+    /**
+     * 统计总向量条目
+     */
+    private static final String COUNT_ALL =
+            "SELECT COUNT(*) FROM vector_store";
+
     // ==================== 实现方法 ====================
 
     @Override
@@ -139,6 +145,16 @@ public class VectorStoreRepositoryImpl implements VectorStoreRepository {
         } catch (Exception e) {
             log.error("【Repository】清空表失败", e);
             return false;
+        }
+    }
+
+    @Override
+    public long countAll() {
+        try {
+            return jdbcTemplate.queryForObject(COUNT_ALL, Long.class);
+        } catch (Exception e) {
+            log.error("【Repository】统计向量总数失败", e);
+            return 0L;
         }
     }
 }

@@ -236,7 +236,7 @@ function appendMessage(content, isAssistant = false, saveToStorage = true) {
     let url;
 
     if (ragTag) {
-        url = `http://localhost:8090/api/v1/${aiModelValue}/generate_stream_rag?message=${encodeURIComponent(message)}&ragTag=${encodeURIComponent(ragTag)}&model=${encodeURIComponent(aiModelModel)}`;
+        url = `http://localhost:8090/api/v1/ai/generate_stream_rag?message=${encodeURIComponent(message)}&ragTag=${encodeURIComponent(ragTag)}&model=${encodeURIComponent(aiModelModel)}`;
     } else {
         url = `http://localhost:8090/api/v1/${aiModelValue}/generate_stream?message=${encodeURIComponent(message)}&model=${encodeURIComponent(aiModelModel)}`;
     }

@@ -68,4 +68,9 @@ public interface VectorStoreRepository {
      * @return 是否成功
      */
     boolean truncate();
+
+    /**
+     * 统计向量表总记录数
+     */
+    long countAll();
 }

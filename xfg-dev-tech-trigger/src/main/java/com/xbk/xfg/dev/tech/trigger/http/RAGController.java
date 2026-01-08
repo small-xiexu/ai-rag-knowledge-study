@@ -42,7 +42,7 @@ public class RAGController implements IRAGService {
      */
     @Override
     @RequestMapping(value = "delete_rag_tag", method = RequestMethod.POST)
-    public Response<Boolean> deleteRagTag(@RequestParam String ragTag) {
+    public Response<Boolean> deleteRagTag(@RequestParam("ragTag") String ragTag) {
         return ragDomainService.deleteRagTag(ragTag);
     }
 

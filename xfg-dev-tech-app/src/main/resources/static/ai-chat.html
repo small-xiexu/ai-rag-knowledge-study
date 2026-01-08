@@ -77,6 +77,24 @@
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen py-8 px-4 overflow-hidden">
+    <!-- 通用模态提示 -->
+    <div id="modalAlert" class="hidden fixed inset-0 z-[9999] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="hideModalAlert()"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
+                <h3 id="modalAlertTitle" class="text-lg font-semibold">提示</h3>
+            </div>
+            <div class="p-6 space-y-3">
+                <p id="modalAlertMessage" class="text-sm text-gray-700 leading-relaxed"></p>
+            </div>
+            <div class="px-6 pb-6 flex justify-end">
+                <button id="modalAlertConfirm" class="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow">
+                    确定
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 主卡片 -->
     <div class="glass-card flex w-full max-w-7xl h-[90vh] rounded-3xl overflow-hidden shadow-2xl relative">
         <!-- 侧边栏 -->
@@ -149,10 +167,8 @@
                     
                     <div class="space-y-1.5">
                         <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">AI 模型</label>
-                        <select id="modelSelect" class="w-full h-9 px-3 text-xs font-medium bg-white/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 text-gray-700 transition-all cursor-pointer hover:bg-white">
-                            <option value="deepseek-r1:1.5b">DeepSeek R1 1.5B</option>
-                            <option value="llama3:8b">Llama3 8B</option>
-                            <option value="qwen:7b">Qwen 7B</option>
+                        <select id="modelSelect" onchange="onModelChange()" class="w-full h-9 px-3 text-xs font-medium bg-white/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 text-gray-700 transition-all cursor-pointer hover:bg-white">
+                            <option value="" disabled selected>请先选择配置</option>
                         </select>
                     </div>
                 </div>
@@ -247,6 +263,9 @@
         let isGenerating = false;
         let currentEventSource = null;
         let contextMenuChatId = null;
+        let modelLocked = null; // 当前会话锁定的模型（首条用户消息后锁定）
+        let lastConfigId = null; // 记录当前激活的配置，防止误切换导致模型不匹配
+        let modalAlertHandler = null; // 通用模态回调
 
         // Custom Renderer for Marked
         const renderer = new marked.Renderer();
@@ -325,13 +344,24 @@
                 if (activeRes.code === '0000' && activeRes.data) {
                     select.value = activeRes.data.id;
                     updateModelOptions(activeRes.data);
+                    lastConfigId = activeRes.data.id;
                 } else if (configs.length > 0) {
                     // 如果没有激活的（不太可能），默认选中第一个但不激活（或者自动激活？）
                     // 这里仅UI选中
                     select.value = configs[0].id;
                     updateModelOptions(configs[0]);
+                    lastConfigId = configs[0].id;
                 } else {
                      select.innerHTML = '<option disabled>暂无配置，请去添加</option>';
+                }
+                // 配置切换后解除锁定，按新配置选择模型
+                modelLocked = null;
+                const chat = chats.find(c => c.id === currentChatId);
+                const selectedModel = document.getElementById('modelSelect').value || null;
+                if (chat) {
+                    chat.model = selectedModel;
+                    saveChats();
+                    renderChatList();
                 }
 
             } catch (e) { console.error('加载配置失败:', e); }
@@ -345,20 +375,43 @@
             
             // 获取选中项的模型信息
             const option = select.options[select.selectedIndex];
-            const models = option.dataset.models ? option.dataset.models.split(',') : [];
+            const models = option.dataset.models ? option.dataset.models.split(',').filter(Boolean) : [];
             const defaultModel = option.dataset.defaultModel;
+            const currentChat = chats.find(c => c.id === currentChatId);
+            const lockedModel = (currentChat && currentChat.messages.length > 0) ? (modelLocked || currentChat?.model || null) : null;
+
+            // 如果当前会话已锁定模型且新配置不包含该模型，禁止切换
+            if (lockedModel && models.length > 0 && !models.includes(lockedModel)) {
+                showModalAlert({
+                    title: '模型不兼容',
+                    message: `当前对话已锁定模型 ${lockedModel}，新配置不包含该模型。请新建对话或切换到无锁定的对话后再切换配置。`,
+                    confirmText: '我知道了'
+                });
+                if (lastConfigId) {
+                    select.value = lastConfigId;
+                }
+                return;
+            }
 
             // 更新模型下拉框
             updateModelOptions({ models, defaultModel });
+            if (lockedModel) {
+                setModelSelect(lockedModel);
+            }
 
             try {
                 // 调用后端激活接口
                 await fetch(`/api/v1/llm/configs/${id}/activate`, { method: 'POST' });
+                lastConfigId = id;
                 // 提示用户（可选，或者静默成功）
                 console.log('配置已切换:', option.text);
             } catch (e) {
                 console.error('切换配置失败:', e);
-                alert('切换配置失败，请重试');
+                showModalAlert({
+                    title: '切换失败',
+                    message: '切换配置失败，请重试',
+                    confirmText: '关闭'
+                });
             }
         }
 
@@ -380,7 +433,9 @@
         }
 
         function createNewChat() {
-            const chat = { id: Date.now().toString(), title: '新对话', messages: [], createdAt: new Date().toISOString() };
+            const initialSelect = document.getElementById('modelSelect');
+            const initialModel = initialSelect && initialSelect.value ? initialSelect.value : null;
+            const chat = { id: Date.now().toString(), title: '新对话', messages: [], createdAt: new Date().toISOString(), model: initialModel };
             chats.unshift(chat);
             saveChats();
             renderChatList();
@@ -406,7 +461,17 @@
             renderChatList();
             renderMessages();
             const chat = chats.find(c => c.id === chatId);
-            if (chat) document.getElementById('currentChatTitle').textContent = chat.title;
+            if (chat) {
+                document.getElementById('currentChatTitle').textContent = chat.title;
+                // 首条用户消息后才锁定模型；无消息时允许切换
+                if (!chat.model) {
+                    chat.model = document.getElementById('modelSelect').value || null;
+                    saveChats();
+                }
+                const locked = chat.messages && chat.messages.length > 0;
+                modelLocked = locked ? chat.model : null;
+                if (chat.model) setModelSelect(chat.model);
+            }
         }
 
         function deleteChat() {
@@ -457,7 +522,10 @@
             container.innerHTML = chats.map(chat => `
                 <div class="group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer mb-0.5 transition-colors ${chat.id === currentChatId ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-700'}"
                     onclick="selectChat('${chat.id}')">
-                    <span class="truncate flex-1 text-sm">${escapeHtml(chat.title)}</span>
+                    <div class="flex-1 min-w-0">
+                        <span class="truncate block text-sm">${escapeHtml(chat.title)}</span>
+                        ${chat.model ? `<span class="truncate block text-[10px] text-gray-400">模型: ${escapeHtml(chat.model)}</span>` : ''}
+                    </div>
                     <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button class="p-1 hover:bg-gray-200 rounded transition-colors" title="重命名"
                             onclick="event.stopPropagation(); renameChatById('${chat.id}')">
@@ -553,11 +621,19 @@
         function addMessage(role, content) {
             const chat = chats.find(c => c.id === currentChatId);
             if (!chat) return;
+            const isFirstUser = role === 'user' && chat.messages.length === 0;
             chat.messages.push({ role, content, timestamp: new Date().toISOString() });
             if (chat.messages.length === 1 && role === 'user') {
                 chat.title = content.slice(0, 20) + (content.length > 20 ? '...' : '');
                 document.getElementById('currentChatTitle').textContent = chat.title;
                 renderChatList();
+            }
+            if (isFirstUser) {
+                // 首条用户消息后锁定模型
+                const selectedModel = document.getElementById('modelSelect').value || chat.model || null;
+                chat.model = selectedModel;
+                modelLocked = selectedModel;
+                if (selectedModel) setModelSelect(selectedModel);
             }
             saveChats();
         }
@@ -594,7 +670,11 @@
                 setTimeout(() => btn.innerHTML = originalHtml, 2000);
             }).catch(err => {
                 console.error('Failed to copy:', err);
-                alert('复制失败');
+                showModalAlert({
+                    title: '复制失败',
+                    message: '复制失败，请稍后再试',
+                    confirmText: '好的'
+                });
             });
         }
 
@@ -608,13 +688,43 @@
             });
         }
 
+        function showModalAlert({ title = '提示', message = '', confirmText = '确定', onConfirm = null }) {
+            document.getElementById('modalAlertTitle').textContent = title;
+            document.getElementById('modalAlertMessage').textContent = message;
+            const btn = document.getElementById('modalAlertConfirm');
+            btn.textContent = confirmText;
+            modalAlertHandler = onConfirm;
+            document.getElementById('modalAlert').classList.remove('hidden');
+        }
+
+        function hideModalAlert() {
+            document.getElementById('modalAlert').classList.add('hidden');
+            modalAlertHandler = null;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const alertBtn = document.getElementById('modalAlertConfirm');
+            if (alertBtn) {
+                alertBtn.onclick = () => {
+                    if (typeof modalAlertHandler === 'function') {
+                        modalAlertHandler();
+                    }
+                    hideModalAlert();
+                };
+            }
+        });
+
         function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             if (!message || isGenerating) return;
 
             if (document.getElementById('configSelect').options.length === 0) {
-              alert('请先去模型配置页面添加并激活一个配置！');
+              showModalAlert({
+                  title: '未激活配置',
+                  message: '请先去模型配置页面添加并激活一个配置！',
+                  confirmText: '我知道了'
+              });
               return;
             }
 
@@ -649,18 +759,66 @@
                 
                 if (config.defaultModel && config.models.includes(config.defaultModel)) {
                     select.value = config.defaultModel;
+                } else {
+                    select.value = config.models[0];
                 }
             } else {
-                select.innerHTML = '<option value="">默认模型</option>';
+                select.innerHTML = '<option value="">请选择模型</option>';
+                select.value = '';
+            }
+        }
+
+        function setModelSelect(value) {
+            const select = document.getElementById('modelSelect');
+            if (!select) return;
+            const options = Array.from(select.options).map(o => o.value);
+            if (value && options.includes(value)) {
+                select.value = value;
+            }
+        }
+
+        function onModelChange() {
+            const select = document.getElementById('modelSelect');
+            const chosen = select.value;
+            if (modelLocked && chosen !== modelLocked) {
+                // 恢复锁定模型，并提示用户需要新建会话
+                setModelSelect(modelLocked);
+                showModalAlert({
+                    title: '切换受限',
+                    message: '同一个会话只能使用一个模型。如需切换模型，请新建对话。',
+                    confirmText: '好的'
+                });
+                return;
+            }
+            const chat = chats.find(c => c.id === currentChatId);
+            if (chat) {
+                chat.model = chosen;
+                saveChats();
+                renderChatList();
             }
         }
 
         function startStreamRequest(message) {
             const ragTag = document.getElementById('ragTagSelect').value;
-            const model = document.getElementById('modelSelect').value; 
-            
+            const model = modelLocked || document.getElementById('modelSelect').value;
+            const chat = chats.find(c => c.id === currentChatId);
+            if (chat) {
+                chat.model = model; // 确保会话记录所选模型
+                saveChats();
+            }
+            if (!model) {
+                showModalAlert({
+                    title: '请选择模型',
+                    message: '当前会话未选择模型，请先在左侧选择模型后再发送。',
+                    confirmText: '好的'
+                });
+                isGenerating = false;
+                updateSendButton();
+                return;
+            }
+
             const url = ragTag 
-                ? `/api/v1/rag/generate_stream_rag?ragTag=${encodeURIComponent(ragTag)}&message=${encodeURIComponent(message)}&model=${encodeURIComponent(model)}`
+                ? `/api/v1/ai/generate_stream_rag?ragTag=${encodeURIComponent(ragTag)}&message=${encodeURIComponent(message)}&model=${encodeURIComponent(model)}`
                 : `/api/v1/ai/generate_stream?message=${encodeURIComponent(message)}&model=${encodeURIComponent(model)}`;
 
             currentEventSource = new EventSource(url);

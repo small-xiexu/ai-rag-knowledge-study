@@ -1,14 +1,17 @@
 package com.xbk.xfg.dev.tech.domain.service;
 
+import com.xbk.xfg.dev.tech.api.dto.EmbeddingActivationResultDTO;
 import com.xbk.xfg.dev.tech.api.dto.LlmProviderConfigDTO;
 import com.xbk.xfg.dev.tech.api.response.Response;
 import com.xbk.xfg.dev.tech.domain.factory.DynamicChatClientFactory;
+import com.xbk.xfg.dev.tech.domain.factory.DynamicEmbeddingFactory;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBucket;
 import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,6 +30,7 @@ public class LlmConfigDomainService {
 
     private static final String CONFIG_HASH_KEY = "llm:provider:configs";
     private static final String ACTIVE_CONFIG_KEY = "llm:provider:active";
+    private static final String ACTIVE_EMBEDDING_CONFIG_KEY = "llm:provider:active:embedding";
 
     @Resource
     private RedissonClient redissonClient;
@@ -34,14 +38,21 @@ public class LlmConfigDomainService {
     @Resource
     private DynamicChatClientFactory dynamicChatClientFactory;
 
+    @Resource
+    private DynamicEmbeddingFactory dynamicEmbeddingFactory;
+
     public Response<List<LlmProviderConfigDTO>> getAllConfigs() {
         try {
             RMap<String, LlmProviderConfigDTO> configMap = redissonClient.getMap(CONFIG_HASH_KEY);
             String activeId = getActiveConfigId();
+            String activeEmbeddingId = getActiveEmbeddingConfigId();
 
             List<LlmProviderConfigDTO> configs = new ArrayList<>(configMap.values());
             // 标记当前激活的配置
-            configs.forEach(config -> config.setActive(config.getId().equals(activeId)));
+            configs.forEach(config -> {
+                config.setActive(config.getId().equals(activeId));
+                config.setActiveForEmbedding(config.getId().equals(activeEmbeddingId));
+            });
 
             return Response.<List<LlmProviderConfigDTO>>builder()
                     .code("0000").info("查询成功").data(configs).build();
@@ -62,7 +73,10 @@ public class LlmConfigDomainService {
                         .code("4004").info("配置不存在").build();
             }
 
-            config.setActive(id.equals(getActiveConfigId()));
+            String activeId = getActiveConfigId();
+            String activeEmbeddingId = getActiveEmbeddingConfigId();
+            config.setActive(id.equals(activeId));
+            config.setActiveForEmbedding(id.equals(activeEmbeddingId));
             return Response.<LlmProviderConfigDTO>builder()
                     .code("0000").info("查询成功").data(config).build();
         } catch (Exception e) {
@@ -75,6 +89,7 @@ public class LlmConfigDomainService {
     public Response<LlmProviderConfigDTO> createConfig(LlmProviderConfigDTO config) {
         try {
             // 生成唯一 ID
+            validateEmbeddingConfig(config);
             config.setId(UUID.randomUUID().toString());
             config.setCreatedAt(LocalDateTime.now());
             config.setUpdatedAt(LocalDateTime.now());
@@ -102,6 +117,7 @@ public class LlmConfigDomainService {
             }
 
             LlmProviderConfigDTO existing = configMap.get(id);
+            validateEmbeddingConfig(config);
             config.setId(id);
             config.setCreatedAt(existing.getCreatedAt());
             config.setUpdatedAt(LocalDateTime.now());
@@ -110,6 +126,7 @@ public class LlmConfigDomainService {
 
             // 使缓存失效
             dynamicChatClientFactory.invalidateCache(id);
+            dynamicEmbeddingFactory.invalidateCache(id);
 
             log.info("更新配置成功: {}", id);
             return Response.<LlmProviderConfigDTO>builder()
@@ -135,9 +152,14 @@ public class LlmConfigDomainService {
                 return Response.<Boolean>builder()
                         .code("4003").info("不能删除当前激活的配置").data(false).build();
             }
+            if (id.equals(getActiveEmbeddingConfigId())) {
+                return Response.<Boolean>builder()
+                        .code("4003").info("不能删除当前激活的 Embedding 配置").data(false).build();
+            }
 
             configMap.remove(id);
             dynamicChatClientFactory.invalidateCache(id);
+            dynamicEmbeddingFactory.invalidateCache(id);
 
             log.info("删除配置成功: {}", id);
             return Response.<Boolean>builder()
@@ -174,6 +196,37 @@ public class LlmConfigDomainService {
         }
     }
 
+    public Response<EmbeddingActivationResultDTO> activateEmbeddingConfig(String id, boolean force) {
+        try {
+            RMap<String, LlmProviderConfigDTO> configMap = redissonClient.getMap(CONFIG_HASH_KEY);
+
+            if (!configMap.containsKey(id)) {
+                return Response.<EmbeddingActivationResultDTO>builder()
+                        .code("4004").info("配置不存在").build();
+            }
+
+            EmbeddingActivationResultDTO result = dynamicEmbeddingFactory.activateEmbeddingConfig(id, force);
+            if (!result.isSuccess() && result.isRequireClearKnowledge()) {
+                return Response.<EmbeddingActivationResultDTO>builder()
+                        .code("DIMENSION_MISMATCH")
+                        .info("维度不兼容，需要清空知识库后再激活")
+                        .data(result)
+                        .build();
+            }
+
+            log.info("激活 Embedding 配置成功: {}", id);
+            return Response.<EmbeddingActivationResultDTO>builder()
+                    .code("0000").info("激活成功").data(result).build();
+        } catch (IllegalArgumentException e) {
+            return Response.<EmbeddingActivationResultDTO>builder()
+                    .code("400").info(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error("激活 Embedding 配置失败", e);
+            return Response.<EmbeddingActivationResultDTO>builder()
+                    .code("500").info("激活 Embedding 配置失败: " + e.getMessage()).build();
+        }
+    }
+
     public Response<LlmProviderConfigDTO> getActiveConfig() {
         try {
             String activeId = getActiveConfigId();
@@ -187,6 +240,30 @@ public class LlmConfigDomainService {
             log.error("获取激活配置失败", e);
             return Response.<LlmProviderConfigDTO>builder()
                     .code("500").info("获取激活配置失败: " + e.getMessage()).build();
+        }
+    }
+
+    public Response<LlmProviderConfigDTO> getActiveEmbeddingConfig() {
+        try {
+            String activeId = getActiveEmbeddingConfigId();
+            if (activeId == null) {
+                return Response.<LlmProviderConfigDTO>builder()
+                        .code("4004").info("没有激活的 Embedding 配置").build();
+            }
+
+            RMap<String, LlmProviderConfigDTO> configMap = redissonClient.getMap(CONFIG_HASH_KEY);
+            LlmProviderConfigDTO config = configMap.get(activeId);
+            if (config != null) {
+                config.setActive(true);
+                config.setActiveForEmbedding(true);
+            }
+
+            return Response.<LlmProviderConfigDTO>builder()
+                    .code("0000").info("查询成功").data(config).build();
+        } catch (Exception e) {
+            log.error("获取激活 Embedding 配置失败", e);
+            return Response.<LlmProviderConfigDTO>builder()
+                    .code("500").info("获取激活 Embedding 配置失败: " + e.getMessage()).build();
         }
     }
 
@@ -210,5 +287,16 @@ public class LlmConfigDomainService {
     private String getActiveConfigId() {
         RBucket<String> activeBucket = redissonClient.getBucket(ACTIVE_CONFIG_KEY);
         return activeBucket.get();
+    }
+
+    private String getActiveEmbeddingConfigId() {
+        RBucket<String> activeBucket = redissonClient.getBucket(ACTIVE_EMBEDDING_CONFIG_KEY);
+        return activeBucket.get();
+    }
+
+    private void validateEmbeddingConfig(LlmProviderConfigDTO config) {
+        if (StringUtils.hasText(config.getEmbeddingModel()) && config.getEmbeddingDimension() == null) {
+            throw new IllegalArgumentException("embeddingModel 不为空时，embeddingDimension 必填");
+        }
     }
 }

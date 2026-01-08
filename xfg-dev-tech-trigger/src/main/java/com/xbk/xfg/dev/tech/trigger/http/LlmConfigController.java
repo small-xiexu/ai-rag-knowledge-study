@@ -1,6 +1,7 @@
 package com.xbk.xfg.dev.tech.trigger.http;
 
 import com.xbk.xfg.dev.tech.api.ILlmConfigService;
+import com.xbk.xfg.dev.tech.api.dto.EmbeddingActivationResultDTO;
 import com.xbk.xfg.dev.tech.api.dto.LlmProviderConfigDTO;
 import com.xbk.xfg.dev.tech.api.response.Response;
 import com.xbk.xfg.dev.tech.domain.service.LlmConfigDomainService;
@@ -86,6 +87,17 @@ public class LlmConfigController implements ILlmConfigService {
     }
 
     /**
+     * 激活 Embedding 配置
+     * POST /api/v1/llm/configs/{id}/activate-embedding
+     */
+    @Override
+    @PostMapping("configs/{id}/activate-embedding")
+    public Response<EmbeddingActivationResultDTO> activateEmbeddingConfig(@PathVariable("id") String id,
+                                                                          @RequestParam(value = "force", defaultValue = "false") boolean force) {
+        return llmConfigDomainService.activateEmbeddingConfig(id, force);
+    }
+
+    /**
      * 获取当前激活的配置
      * GET /api/v1/llm/configs/active
      */
@@ -93,6 +105,16 @@ public class LlmConfigController implements ILlmConfigService {
     @GetMapping("configs/active")
     public Response<LlmProviderConfigDTO> getActiveConfig() {
         return llmConfigDomainService.getActiveConfig();
+    }
+
+    /**
+     * 获取当前激活的 Embedding 配置
+     * GET /api/v1/llm/configs/active-embedding
+     */
+    @Override
+    @GetMapping("configs/active-embedding")
+    public Response<LlmProviderConfigDTO> getActiveEmbeddingConfig() {
+        return llmConfigDomainService.getActiveEmbeddingConfig();
     }
 
     /**
@@ -105,4 +127,3 @@ public class LlmConfigController implements ILlmConfigService {
         return llmConfigDomainService.testConnection(config);
     }
 }
-
