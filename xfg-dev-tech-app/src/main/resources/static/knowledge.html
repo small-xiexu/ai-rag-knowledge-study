@@ -171,6 +171,7 @@
     <script>
         const API_URL = 'http://localhost:8090/api/v1/rag/query_rag_tag_list';
         const DELETE_API_URL = 'http://localhost:8090/api/v1/rag/delete_rag_tag';
+        const COUNT_API_URL = 'http://localhost:8090/api/v1/rag/tag_count';
 
         // 删除知识库
         async function deleteRagTag(tag) {
@@ -256,6 +257,10 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-600 rounded-full">已就绪</span>
+                        <span id="count-${index}" class="text-xs text-gray-500 hidden">向量：<span class="font-semibold count-value">--</span> 条</span>
+                        <button onclick="showTagCount('${tag.replace(/'/g, "\\'")}', 'count-${index}')" class="px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-100 hover:bg-indigo-50 rounded-lg transition-colors" title="查看当前向量条数">
+                            查看数量
+                        </button>
                         <button onclick="deleteRagTag('${tag.replace(/'/g, "\\'")}')" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="删除知识库">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -315,6 +320,41 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // 获取单个知识库的向量条目数并在行内展示
+        async function showTagCount(tag, countElementId) {
+            const button = event?.currentTarget;
+            if (button) {
+                button.disabled = true;
+                button.textContent = '查询中...';
+            }
+
+            try {
+                const response = await fetch(`${COUNT_API_URL}?ragTag=${encodeURIComponent(tag)}`);
+                const result = await response.json();
+
+                if (result.code === '0000') {
+                    const countElement = document.getElementById(countElementId);
+                    if (countElement) {
+                        const valueSpan = countElement.querySelector('.count-value');
+                        if (valueSpan) {
+                            valueSpan.textContent = result.data ?? 0;
+                        }
+                        countElement.classList.remove('hidden');
+                    }
+                } else {
+                    alert(result.info || '查询失败');
+                }
+            } catch (error) {
+                console.error('查询数量错误:', error);
+                alert('网络错误，查询失败');
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = '查看数量';
+                }
+            }
         }
 
         // 页面加载时获取列表

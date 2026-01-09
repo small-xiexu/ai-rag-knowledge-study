@@ -46,6 +46,11 @@ public interface IRAGService {
     Response<Boolean> deleteRagTag(String ragTag);
 
     /**
+     * 查询指定知识库的向量数量
+     */
+    Response<Long> countByRagTag(String ragTag);
+
+    /**
      * 查询任务进度
      * @param taskId 任务ID
      * @return 任务进度

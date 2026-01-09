@@ -86,7 +86,8 @@ public class ApiLogAspect {
             return "[]";
         }
         try {
-            return JSON.toJSONString(args);
+            Object[] safeArgs = sanitizeArgs(args);
+            return JSON.toJSONString(safeArgs);
         } catch (Exception e) {
             return "[序列化失败]";
         }
@@ -100,10 +101,47 @@ public class ApiLogAspect {
             return "[Flux Stream]";
         }
         try {
-            return JSON.toJSONString(result);
+            Object safeResult = sanitizeArg(result);
+            return JSON.toJSONString(safeResult);
         } catch (Exception e) {
             return "[序列化失败]";
         }
+    }
+
+    /**
+     * 处理不可序列化参数（如 MultipartFile/InputStream），替换为摘要信息
+     */
+    private Object[] sanitizeArgs(Object[] args) {
+        if (args == null) return new Object[0];
+        Object[] sanitized = new Object[args.length];
+        for (int i = 0; i < args.length; i++) {
+            sanitized[i] = sanitizeArg(args[i]);
+        }
+        return sanitized;
+    }
+
+    private Object sanitizeArg(Object arg) {
+        if (arg == null) return null;
+        // 跳过 Reactor 流
+        if (arg instanceof Flux) return "[Flux Stream]";
+        // MultipartFile
+        if (arg instanceof org.springframework.web.multipart.MultipartFile file) {
+            return "MultipartFile(name=" + file.getName() + ", original=" + file.getOriginalFilename() + ", size=" + file.getSize() + ")";
+        }
+        // MultipartFile[]
+        if (arg instanceof org.springframework.web.multipart.MultipartFile[] files) {
+            return java.util.Arrays.stream(files)
+                    .map(f -> "MultipartFile(name=" + f.getName() + ", original=" + f.getOriginalFilename() + ", size=" + f.getSize() + ")")
+                    .toArray(String[]::new);
+        }
+        // InputStream
+        if (arg instanceof java.io.InputStream) {
+            return "[InputStream]";
+        }
+        // Servlet request/response
+        if (arg instanceof jakarta.servlet.ServletRequest) return "[ServletRequest]";
+        if (arg instanceof jakarta.servlet.ServletResponse) return "[ServletResponse]";
+        return arg;
     }
     
     /**

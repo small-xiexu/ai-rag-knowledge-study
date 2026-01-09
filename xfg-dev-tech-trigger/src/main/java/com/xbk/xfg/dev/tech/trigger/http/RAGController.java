@@ -47,12 +47,22 @@ public class RAGController implements IRAGService {
     }
 
     /**
+     * 【查询知识库向量数量】
+     * GET /api/v1/rag/tag_count
+     */
+    @Override
+    @RequestMapping(value = "tag_count", method = RequestMethod.GET)
+    public Response<Long> countByRagTag(@RequestParam("ragTag") String ragTag) {
+        return ragDomainService.countByRagTag(ragTag);
+    }
+
+    /**
      * 【上传知识库文件】
      * POST /api/v1/rag/file/upload
      */
     @Override
     @RequestMapping(value = "file/upload", method = RequestMethod.POST, headers = "content-type=multipart/form-data")
-    public Response<String> uploadFile(@RequestParam String ragTag, @RequestParam("file") List<MultipartFile> files) {
+    public Response<String> uploadFile(@RequestParam("ragTag") String ragTag, @RequestParam("file") List<MultipartFile> files) {
         return ragDomainService.uploadFile(ragTag, files);
     }
 

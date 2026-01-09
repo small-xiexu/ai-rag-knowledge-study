@@ -484,7 +484,8 @@
                         progressContainer.classList.add('hidden');
                         progressBar.style.width = '0%';
                         progressText.textContent = '0%';
-                    }, 1000);
+                        window.location.href = 'knowledge.html';
+                    }, 800);
                 } else { showToast(result.info || '上传失败，请重试', false); }
             } catch (error) { console.error('上传错误:', error); showToast('网络错误', false); } 
             finally {

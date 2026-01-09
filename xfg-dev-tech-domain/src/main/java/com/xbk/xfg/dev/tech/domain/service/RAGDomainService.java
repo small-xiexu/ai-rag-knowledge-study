@@ -98,6 +98,27 @@ public class RAGDomainService {
     }
 
     /**
+     * 查询指定知识库的向量数量
+     */
+    public Response<Long> countByRagTag(String ragTag) {
+        try {
+            long count = vectorStoreRepository.countByRagTag(ragTag);
+            return Response.<Long>builder()
+                    .code("0000")
+                    .info("查询成功")
+                    .data(count)
+                    .build();
+        } catch (Exception e) {
+            log.error("统计知识库向量数量异常", e);
+            return Response.<Long>builder()
+                    .code("500")
+                    .info("查询失败: " + e.getMessage())
+                    .data(0L)
+                    .build();
+        }
+    }
+
+    /**
      * 【上传知识库文件】
      * 将用户上传的文件解析、切块、向量化后存入 PgVector 数据库
      */
