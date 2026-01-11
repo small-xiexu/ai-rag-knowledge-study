@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 助手 - 智能对话系统</title>
+    <!-- Tailwind CSS -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2310a37f'/%3E%3Cstop offset='100%25' stop-color='%231a7f64'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='url(%23g)'/%3E%3Cpath d='M50 25 L50 50 L70 60' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='50' cy='50' r='8' fill='white'/%3E%3Ccircle cx='30' cy='40' r='5' fill='white' opacity='0.7'/%3E%3Ccircle cx='70' cy='40' r='5' fill='white' opacity='0.7'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Markdown & Highlight CDNs -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* 背景渐变 */
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        /* 毛玻璃效果 */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .message-enter { animation: messageEnter 0.2s ease-out; }
+        @keyframes messageEnter {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Markdown 样式覆盖 */
+        .prose pre { margin: 0; padding: 0; background: transparent; }
+        .prose :where(code):not(:where([class~="not-prose"] *)) { color: inherit; font-weight: 500; }
+        .prose :where(code):not(:where([class~="not-prose"] *))::before { content: ""; }
+        .prose :where(code):not(:where([class~="not-prose"] *))::after { content: ""; }
+        .prose p { margin-bottom: 0.5em; margin-top: 0.5em; }
+        .prose ul, .prose ol { margin-bottom: 0.5em; margin-top: 0.5em; padding-left: 1.5em; }
+        .prose li { margin: 0; }
+        
+        /* 代码块样式 */
+        .hljs-container { position: relative; border-radius: 0.5rem; overflow: hidden; margin: 0.5rem 0; background: #282c34; }
+        .hljs-header { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.25rem 0.75rem; background: #21252b; color: #abb2bf; font-size: 0.75rem;
+            border-bottom: 1px solid #181a1f;
+        }
+        .hljs-body { padding: 0.75rem; overflow-x: auto; }
+        .hljs { background: transparent !important; padding: 0 !important; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen py-8 px-4 overflow-hidden">
+    <!-- 通用模态提示 -->
+    <div id="modalAlert" class="hidden fixed inset-0 z-[9999] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="hideModalAlert()"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
+                <h3 id="modalAlertTitle" class="text-lg font-semibold">提示</h3>
+            </div>
+            <div class="p-6 space-y-3">
+                <p id="modalAlertMessage" class="text-sm text-gray-700 leading-relaxed"></p>
+            </div>
+            <div class="px-6 pb-6 flex justify-end">
+                <button id="modalAlertConfirm" class="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow">
+                    确定
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主卡片 -->
+    <div class="glass-card flex w-full max-w-7xl h-[90vh] rounded-3xl overflow-hidden shadow-2xl relative">
+        <!-- 侧边栏 -->
+        <aside id="sidebar" class="w-64 bg-gray-50/50 border-r border-gray-100 flex flex-col backdrop-blur-sm">
+            <!-- Logo -->
+            <div class="h-16 px-6 flex items-center border-b border-gray-100/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                        </svg>
+                    </div>
+                    <span class="font-bold text-lg text-gray-800 tracking-tight">AI Assistant</span>
+                </div>
+            </div>
+            
+            <!-- 新建按钮 + 清空按钮 -->
+            <div class="p-4 space-y-2">
+                <button onclick="createNewChat()" class="w-full py-2.5 bg-gradient-to-r from-gray-800 to-gray-900 hover:from-black hover:to-gray-800 text-white text-sm font-medium rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group">
+                    <svg class="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    新建对话
+                </button>
+                <button onclick="clearAllChats()" class="w-full py-2 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 text-xs font-medium rounded-xl transition-all flex items-center justify-center gap-1.5 border border-red-100 hover:border-red-200">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    清空所有对话
+                </button>
+            </div>
+            
+            <!-- 聊天列表 -->
+            <div class="flex-1 overflow-y-auto px-3 space-y-1" id="chatList"></div>
+            
+            <!-- 底部 -->
+            <div class="p-4 border-t border-gray-100/50 space-y-3 bg-white/30 backdrop-blur-sm">
+                <!-- 知识库入口 -->
+                <a href="knowledge.html" class="w-full py-2 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
+                    管理知识库
+                </a>
+                
+                <!-- 模型配置入口 -->
+                <a href="model-config.html" class="w-full py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    模型配置
+                </a>
+                
+                <div class="space-y-3 pt-2">
+                    <!-- 配置选择 -->
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">当前配置 (全局)</label>
+                        <select id="configSelect" onchange="switchConfig()" class="w-full h-9 px-3 text-xs font-medium bg-green-50/50 border border-green-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-300 text-green-700 transition-all cursor-pointer hover:bg-green-50">
+                            <option value="" disabled selected>加载中...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">RAG 知识库</label>
+                        <select id="ragTagSelect" class="w-full h-9 px-3 text-xs font-medium bg-purple-50/50 border border-purple-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300 text-purple-700 transition-all cursor-pointer hover:bg-purple-50">
+                            <option value="">不使用知识库</option>
+                        </select>
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">AI 模型</label>
+                        <select id="modelSelect" onchange="onModelChange()" class="w-full h-9 px-3 text-xs font-medium bg-white/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 text-gray-700 transition-all cursor-pointer hover:bg-white">
+                            <option value="" disabled selected>请先选择配置</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主区域 -->
+        <main class="flex-1 flex flex-col bg-white/60 relative">
+            <!-- 头部 -->
+            <header class="h-16 px-6 flex items-center justify-between border-b border-gray-100/50 bg-white/40 backdrop-blur-sm z-10">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="lg:hidden w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 id="currentChatTitle" class="text-lg font-bold text-gray-800">新对话</h1>
+                        <p class="text-xs text-gray-500 mt-0.5" id="chatStatus">AI 助手准备就绪</p>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 消息区域 -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto scroll-smooth">
+                <!-- 欢迎页 -->
+                <div id="welcomeMessage" class="h-full flex flex-col items-center justify-center px-4">
+                    <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-8 shadow-xl shadow-indigo-500/20 animate-float">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-3">你好，我是你的 AI 助手</h2>
+                    <p class="text-gray-500 text-base max-w-md text-center leading-relaxed">
+                        基于 RAG 知识库增强的智能对话系统<br>
+                        选择左侧知识库和模型，开始我们的对话吧
+                    </p>
+                </div>
+            </div>
+
+            <!-- 输入区域 -->
+            <div class="px-6 py-6 bg-white/40 backdrop-blur-sm border-t border-gray-100/50">
+                <div class="flex gap-4 items-center max-w-2xl mx-auto">
+                    <div class="flex-1 relative group flex items-center">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="输入消息，按下 Enter 发送..." 
+                            rows="1"
+                            class="w-full min-h-[56px] max-h-32 px-5 py-4 bg-white border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm leading-relaxed overflow-hidden"
+                            onkeydown="handleKeyDown(event)"
+                            oninput="autoResize(this)"
+                        ></textarea>
+                    </div>
+                    <button 
+                        id="sendButton"
+                        onclick="sendMessage()" 
+                        class="w-14 h-14 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl transition-all shadow-lg hover:shadow-indigo-500/30 flex items-center justify-center flex-shrink-0 active:scale-95"
+                    >
+                        <svg id="sendIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                        <svg id="loadingIcon" class="w-6 h-6 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-center text-xs text-gray-400 mt-3 font-medium">AI 模型生成内容仅供参考</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div id="contextMenu" class="hidden fixed bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
+        <button onclick="renameChat()" class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-sm text-gray-700">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            重命名
+        </button>
+        <button onclick="deleteChat()" class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-sm text-red-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            删除
+        </button>
+    </div>
+
+    <script>
+        let chats = [];
+        let currentChatId = null;
+        let isGenerating = false;
+        let currentEventSource = null;
+        let contextMenuChatId = null;
+        let modelLocked = null; // 当前会话锁定的模型（首条用户消息后锁定）
+        let lastConfigId = null; // 记录当前激活的配置，防止误切换导致模型不匹配
+        let modalAlertHandler = null; // 通用模态回调
+        const RAG_TAG_STORAGE_KEY = 'ai-rag-knowledge-selected-tag';
+
+        function saveRagTagSelection(value) {
+            localStorage.setItem(RAG_TAG_STORAGE_KEY, value || '');
+        }
+
+        function restoreRagTagSelection(select) {
+            const saved = localStorage.getItem(RAG_TAG_STORAGE_KEY);
+            const options = Array.from(select.options || []);
+            if (saved && options.some(opt => opt.value === saved)) {
+                select.value = saved;
+            } else if (options.length > 0) {
+                select.value = options[0].value;
+                saveRagTagSelection(select.value);
+            }
+        }
+
+        // Custom Renderer for Marked
+        const renderer = new marked.Renderer();
+        renderer.code = function(code, language) {
+            // Fix: Check hljs globally instead of highlight which caused errors
+            const validLang = !!(language && typeof hljs !== 'undefined' && hljs.getLanguage(language));
+            const highlighted = validLang && typeof hljs !== 'undefined'
+                ? hljs.highlight(code, { language }).value 
+                : (typeof hljs !== 'undefined' ? hljs.highlightAuto(code).value : code);
+            const langShow = validLang ? language : 'text';
+            
+            return `<div class="hljs-container group">
+                <div class="hljs-header">
+                    <span class="font-mono">${langShow}</span>
+                    <button onclick="copyCode(this)" class="opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-white cursor-pointer flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        复制
+                    </button>
+                    <div class="hidden code-content">${encodeURIComponent(code)}</div>
+                </div>
+                <div class="hljs-body"><pre><code class="hljs ${language}">${highlighted}</code></pre></div>
+            </div>`;
+        };
+        
+        marked.setOptions({
+            renderer: renderer,
+            breaks: true,
+            gfm: true
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedChats = localStorage.getItem('ai-chats-v2');
+            if (savedChats) {
+                chats = JSON.parse(savedChats);
+                renderChatList();
+                if (chats.length > 0) selectChat(chats[0].id);
+            }
+            const ragSelect = document.getElementById('ragTagSelect');
+            if (ragSelect) {
+                ragSelect.addEventListener('change', () => saveRagTagSelection(ragSelect.value));
+            }
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#contextMenu')) hideContextMenu();
+            });
+            // 加载知识库列表
+            loadRagTagList();
+            // 加载 LLM 配置
+            loadConfigs();
+        });
+
+        // 加载配置列表
+        async function loadConfigs() {
+            try {
+                // 并行加载所有配置和当前激活配置
+                const [configsRes, activeRes] = await Promise.all([
+                    fetch('/api/v1/llm/configs').then(r => r.json()),
+                    fetch('/api/v1/llm/configs/active').then(r => r.json())
+                ]);
+
+                const select = document.getElementById('configSelect');
+                select.innerHTML = '';
+                
+                let configs = [];
+                if (configsRes.code === '0000' && configsRes.data) {
+                    configs = configsRes.data;
+                    configs.forEach(config => {
+                        const option = document.createElement('option');
+                        option.value = config.id;
+                        // 显示名称和提供商类型
+                        const icon = config.providerType === 'OLLAMA' ? '🦙' : (config.providerType === 'OPENAI' ? '🤖' : '🧠');
+                        option.textContent = `${icon} ${config.name}`;
+                        // 保存模型列表到 dataset 以便后续使用
+                        option.dataset.models = (config.models || []).join(',');
+                        option.dataset.defaultModel = config.defaultModel || '';
+                        select.appendChild(option);
+                    });
+                }
+                
+                // 设置当前激活项
+                if (activeRes.code === '0000' && activeRes.data) {
+                    select.value = activeRes.data.id;
+                    updateModelOptions(activeRes.data);
+                    lastConfigId = activeRes.data.id;
+                } else if (configs.length > 0) {
+                    // 如果没有激活的（不太可能），默认选中第一个但不激活（或者自动激活？）
+                    // 这里仅UI选中
+                    select.value = configs[0].id;
+                    updateModelOptions(configs[0]);
+                    lastConfigId = configs[0].id;
+                } else {
+                     select.innerHTML = '<option disabled>暂无配置，请去添加</option>';
+                }
+                // 配置切换后解除锁定，按新配置选择模型
+                modelLocked = null;
+                const chat = chats.find(c => c.id === currentChatId);
+                const selectedModel = document.getElementById('modelSelect').value || null;
+                if (chat) {
+                    chat.model = selectedModel;
+                    saveChats();
+                    renderChatList();
+                }
+
+            } catch (e) { console.error('加载配置失败:', e); }
+        }
+
+        // 切换配置
+        async function switchConfig() {
+            const select = document.getElementById('configSelect');
+            const id = select.value;
+            if (!id) return;
+            
+            // 获取选中项的模型信息
+            const option = select.options[select.selectedIndex];
+            const models = option.dataset.models ? option.dataset.models.split(',').filter(Boolean) : [];
+            const defaultModel = option.dataset.defaultModel;
+            const currentChat = chats.find(c => c.id === currentChatId);
+            const lockedModel = (currentChat && currentChat.messages.length > 0) ? (modelLocked || currentChat?.model || null) : null;
+
+            // 如果当前会话已锁定模型且新配置不包含该模型，禁止切换
+            if (lockedModel && models.length > 0 && !models.includes(lockedModel)) {
+                showModalAlert({
+                    title: '模型不兼容',
+                    message: `当前对话已锁定模型 ${lockedModel}，新配置不包含该模型。请新建对话或切换到无锁定的对话后再切换配置。`,
+                    confirmText: '我知道了'
+                });
+                if (lastConfigId) {
+                    select.value = lastConfigId;
+                }
+                return;
+            }
+
+            // 更新模型下拉框
+            updateModelOptions({ models, defaultModel });
+            if (lockedModel) {
+                setModelSelect(lockedModel);
+            }
+
+            try {
+                // 调用后端激活接口
+                await fetch(`/api/v1/llm/configs/${id}/activate`, { method: 'POST' });
+                lastConfigId = id;
+                // 提示用户（可选，或者静默成功）
+                console.log('配置已切换:', option.text);
+            } catch (e) {
+                console.error('切换配置失败:', e);
+                showModalAlert({
+                    title: '切换失败',
+                    message: '切换配置失败，请重试',
+                    confirmText: '关闭'
+                });
+            }
+        }
+
+        // 加载知识库列表填充下拉框
+        async function loadRagTagList() {
+            try {
+                const response = await fetch('/api/v1/rag/query_rag_tag_list');
+                const result = await response.json();
+                if (result.code === '0000' && result.data) {
+                    const select = document.getElementById('ragTagSelect');
+                    select.innerHTML = '';
+                    result.data.forEach(tag => {
+                        const option = document.createElement('option');
+                        option.value = tag;
+                        option.textContent = tag;
+                        select.appendChild(option);
+                    });
+                    restoreRagTagSelection(select);
+                }
+            } catch (e) { console.error('加载知识库列表失败:', e); }
+        }
+
+        function createNewChat() {
+            const initialSelect = document.getElementById('modelSelect');
+            const initialModel = initialSelect && initialSelect.value ? initialSelect.value : null;
+            const chat = { id: Date.now().toString(), title: '新对话', messages: [], createdAt: new Date().toISOString(), model: initialModel };
+            chats.unshift(chat);
+            saveChats();
+            renderChatList();
+            selectChat(chat.id);
+        }
+
+        function clearAllChats() {
+            if (chats.length === 0) {
+                // alert('暂无对话可清空'); // Optional: remove alert too if strictly "no inquiries"
+                return;
+            }
+            // Force clear without confirm
+            chats = [];
+            currentChatId = null;
+            saveChats();
+            renderChatList();
+            renderMessages();
+            document.getElementById('currentChatTitle').textContent = '新对话';
+        }
+
+        function selectChat(chatId) {
+            currentChatId = chatId;
+            renderChatList();
+            renderMessages();
+            const chat = chats.find(c => c.id === chatId);
+            if (chat) {
+                document.getElementById('currentChatTitle').textContent = chat.title;
+                // 首条用户消息后才锁定模型；无消息时允许切换
+                if (!chat.model) {
+                    chat.model = document.getElementById('modelSelect').value || null;
+                    saveChats();
+                }
+                const locked = chat.messages && chat.messages.length > 0;
+                modelLocked = locked ? chat.model : null;
+                if (chat.model) setModelSelect(chat.model);
+            }
+        }
+
+        function deleteChat() {
+            hideContextMenu();
+            if (!contextMenuChatId) return;
+            chats = chats.filter(c => c.id !== contextMenuChatId);
+            saveChats();
+            renderChatList();
+            if (currentChatId === contextMenuChatId) {
+                currentChatId = chats.length > 0 ? chats[0].id : null;
+                currentChatId ? selectChat(currentChatId) : renderMessages();
+            }
+        }
+
+        function renameChat() {
+            hideContextMenu();
+            if (!contextMenuChatId) return;
+            const chat = chats.find(c => c.id === contextMenuChatId);
+            if (!chat) return;
+            const newTitle = prompt('输入新名称:', chat.title);
+            if (newTitle?.trim()) {
+                chat.title = newTitle.trim();
+                saveChats();
+                renderChatList();
+                if (currentChatId === contextMenuChatId) document.getElementById('currentChatTitle').textContent = chat.title;
+            }
+        }
+
+        function showContextMenu(e, chatId) {
+            e.preventDefault();
+            e.stopPropagation();
+            contextMenuChatId = chatId;
+            const menu = document.getElementById('contextMenu');
+            menu.classList.remove('hidden');
+            menu.style.left = e.pageX + 'px';
+            menu.style.top = e.pageY + 'px';
+        }
+
+        function hideContextMenu() {
+            document.getElementById('contextMenu').classList.add('hidden');
+            contextMenuChatId = null;
+        }
+
+        function saveChats() { localStorage.setItem('ai-chats-v2', JSON.stringify(chats)); }
+
+        function renderChatList() {
+            const container = document.getElementById('chatList');
+            container.innerHTML = chats.map(chat => `
+                <div class="group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer mb-0.5 transition-colors ${chat.id === currentChatId ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-700'}"
+                    onclick="selectChat('${chat.id}')">
+                    <div class="flex-1 min-w-0">
+                        <span class="truncate block text-sm">${escapeHtml(chat.title)}</span>
+                        ${chat.model ? `<span class="truncate block text-[10px] text-gray-400">模型: ${escapeHtml(chat.model)}</span>` : ''}
+                    </div>
+                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button class="p-1 hover:bg-gray-200 rounded transition-colors" title="重命名"
+                            onclick="event.stopPropagation(); renameChatById('${chat.id}')">
+                            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </button>
+                        <button class="p-1 hover:bg-red-100 rounded transition-colors" title="删除"
+                            onclick="event.stopPropagation(); deleteChatById('${chat.id}')">
+                            <svg class="w-3 h-3 text-gray-400 hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renameChatById(chatId) {
+            const chat = chats.find(c => c.id === chatId);
+            if (!chat) return;
+            const newTitle = prompt('输入新名称:', chat.title);
+            if (newTitle?.trim()) {
+                chat.title = newTitle.trim();
+                saveChats();
+                renderChatList();
+                if (currentChatId === chatId) document.getElementById('currentChatTitle').textContent = chat.title;
+            }
+        }
+
+        function deleteChatById(chatId) {
+            // Simply delete without confirmation
+            chats = chats.filter(c => c.id !== chatId);
+            saveChats();
+            renderChatList();
+            if (currentChatId === chatId) {
+                currentChatId = chats.length > 0 ? chats[0].id : null;
+                currentChatId ? selectChat(currentChatId) : renderMessages();
+            }
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('messagesContainer');
+            const chat = chats.find(c => c.id === currentChatId);
+            
+            if (!chat || chat.messages.length === 0) {
+                container.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center px-4">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-6">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-semibold text-gray-800 mb-2">你好，有什么可以帮你？</h2>
+                        <p class="text-gray-500 text-sm">选择左侧模型，开始与 AI 对话</p>
+                    </div>`;
+                return;
+            }
+            
+            container.innerHTML = `<div class="py-6 px-6 space-y-6">` + 
+                chat.messages.map((msg, i) => {
+                    const isUser = msg.role === 'user';
+                    // 用户消息只做简单转义，AI 消息做 Markdown 渲染
+                    // 再次过滤，确保安全
+                    const filteredContent = isUser ? msg.content : filterContent(msg.content, false); 
+                    const contentHtml = isUser ? escapeHtml(msg.content) : marked.parse(filteredContent);
+                    
+                    return `
+                    <div id="msg-${i}" class="message-enter flex flex-col ${isUser ? 'items-end' : 'items-start'} group">
+                        <div class="${isUser 
+                            ? 'w-fit max-w-[75%] bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl rounded-br-md px-4 py-2.5 shadow-md text-sm' 
+                            : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-3xl shadow-sm prose prose-sm prose-slate break-words text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0'}">
+                             <div id="msg-content-${i}" class="${isUser ? 'whitespace-pre-wrap leading-relaxed' : ''}">${contentHtml}</div>
+                        </div>
+                        <div class="flex items-center gap-2 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 select-none">
+                            <span class="text-[10px] text-gray-400">${formatTime(msg.timestamp)}</span>
+                            <button onclick="copyText(this)" class="text-[10px] text-gray-400 hover:text-indigo-500 flex items-center gap-0.5 transition-colors" data-content="${encodeURIComponent(filteredContent)}">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                                复制
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('') + `</div>`;
+            scrollToBottom();
+        }
+
+        function formatTime(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            return date.toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function addMessage(role, content) {
+            const chat = chats.find(c => c.id === currentChatId);
+            if (!chat) return;
+            const isFirstUser = role === 'user' && chat.messages.length === 0;
+            chat.messages.push({ role, content, timestamp: new Date().toISOString() });
+            if (chat.messages.length === 1 && role === 'user') {
+                chat.title = content.slice(0, 20) + (content.length > 20 ? '...' : '');
+                document.getElementById('currentChatTitle').textContent = chat.title;
+                renderChatList();
+            }
+            if (isFirstUser) {
+                // 首条用户消息后锁定模型
+                const selectedModel = document.getElementById('modelSelect').value || chat.model || null;
+                chat.model = selectedModel;
+                modelLocked = selectedModel;
+                if (selectedModel) setModelSelect(selectedModel);
+            }
+            saveChats();
+        }
+
+        function updateLastAIMessage(content) {
+            const chat = chats.find(c => c.id === currentChatId);
+            if (!chat) return;
+            const lastMsgIndex = chat.messages.length - 1;
+            const lastMsg = chat.messages[lastMsgIndex];
+            
+            if (lastMsg?.role === 'assistant') {
+                lastMsg.content = content;
+                // saveChats(); // 减少IO频率，可以放在流结束时保存
+                
+                // 局部更新 DOM，防止闪烁
+                const contentDiv = document.getElementById(`msg-content-${lastMsgIndex}`);
+                if (contentDiv) {
+                    contentDiv.innerHTML = marked.parse(filterContent(content));
+                    // 这里不需要 scrollToBottom，除非是大量内容，且用户已在底部
+                    // scrollToBottom(); 
+                } else {
+                    renderMessages(); 
+                }
+            }
+        }
+        
+        // 复制代码
+        function copyCode(btn) {
+            const contentDiv = btn.parentElement.querySelector('.code-content');
+            const code = decodeURIComponent(contentDiv.innerText);
+            navigator.clipboard.writeText(code).then(() => {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<svg class="w-3 h-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> 已复制`;
+                setTimeout(() => btn.innerHTML = originalHtml, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showModalAlert({
+                    title: '复制失败',
+                    message: '复制失败，请稍后再试',
+                    confirmText: '好的'
+                });
+            });
+        }
+
+        // 复制全文
+        function copyText(btn) {
+            const content = decodeURIComponent(btn.dataset.content);
+            navigator.clipboard.writeText(content).then(() => {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> 已复制`;
+                setTimeout(() => btn.innerHTML = originalHtml, 2000);
+            });
+        }
+
+        function showModalAlert({ title = '提示', message = '', confirmText = '确定', onConfirm = null }) {
+            document.getElementById('modalAlertTitle').textContent = title;
+            document.getElementById('modalAlertMessage').textContent = message;
+            const btn = document.getElementById('modalAlertConfirm');
+            btn.textContent = confirmText;
+            modalAlertHandler = onConfirm;
+            document.getElementById('modalAlert').classList.remove('hidden');
+        }
+
+        function hideModalAlert() {
+            document.getElementById('modalAlert').classList.add('hidden');
+            modalAlertHandler = null;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const alertBtn = document.getElementById('modalAlertConfirm');
+            if (alertBtn) {
+                alertBtn.onclick = () => {
+                    if (typeof modalAlertHandler === 'function') {
+                        modalAlertHandler();
+                    }
+                    hideModalAlert();
+                };
+            }
+        });
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message || isGenerating) return;
+
+            if (document.getElementById('configSelect').options.length === 0) {
+              showModalAlert({
+                  title: '未激活配置',
+                  message: '请先去模型配置页面添加并激活一个配置！',
+                  confirmText: '我知道了'
+              });
+              return;
+            }
+
+            input.value = '';
+            input.style.height = 'auto';
+            input.focus();
+
+            if (!currentChatId) createNewChat();
+
+            addMessage('user', message);
+            renderMessages();
+
+            isGenerating = true;
+            updateSendButton();
+            addMessage('assistant', ''); 
+            renderMessages();
+
+            startStreamRequest(message);
+        }
+
+        function updateModelOptions(config) {
+            const select = document.getElementById('modelSelect');
+            select.innerHTML = '';
+            
+            if (config.models && config.models.length > 0) {
+                config.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model;
+                    option.textContent = model;
+                    select.appendChild(option);
+                });
+                
+                if (config.defaultModel && config.models.includes(config.defaultModel)) {
+                    select.value = config.defaultModel;
+                } else {
+                    select.value = config.models[0];
+                }
+            } else {
+                select.innerHTML = '<option value="">请选择模型</option>';
+                select.value = '';
+            }
+        }
+
+        function setModelSelect(value) {
+            const select = document.getElementById('modelSelect');
+            if (!select) return;
+            const options = Array.from(select.options).map(o => o.value);
+            if (value && options.includes(value)) {
+                select.value = value;
+            }
+        }
+
+        function onModelChange() {
+            const select = document.getElementById('modelSelect');
+            const chosen = select.value;
+            if (modelLocked && chosen !== modelLocked) {
+                // 恢复锁定模型，并提示用户需要新建会话
+                setModelSelect(modelLocked);
+                showModalAlert({
+                    title: '切换受限',
+                    message: '同一个会话只能使用一个模型。如需切换模型，请新建对话。',
+                    confirmText: '好的'
+                });
+                return;
+            }
+            const chat = chats.find(c => c.id === currentChatId);
+            if (chat) {
+                chat.model = chosen;
+                saveChats();
+                renderChatList();
+            }
+        }
+
+        function startStreamRequest(message) {
+            const ragTag = document.getElementById('ragTagSelect').value;
+            const model = modelLocked || document.getElementById('modelSelect').value;
+            const chat = chats.find(c => c.id === currentChatId);
+            if (chat) {
+                chat.model = model; // 确保会话记录所选模型
+                saveChats();
+            }
+            if (!model) {
+                showModalAlert({
+                    title: '请选择模型',
+                    message: '当前会话未选择模型，请先在左侧选择模型后再发送。',
+                    confirmText: '好的'
+                });
+                isGenerating = false;
+                updateSendButton();
+                return;
+            }
+
+            const url = ragTag 
+                ? `/api/v1/ai/generate_stream_rag?ragTag=${encodeURIComponent(ragTag)}&message=${encodeURIComponent(message)}&model=${encodeURIComponent(model)}`
+                : `/api/v1/ai/generate_stream?message=${encodeURIComponent(message)}&model=${encodeURIComponent(model)}`;
+
+            currentEventSource = new EventSource(url);
+            let fullContent = '';
+
+            currentEventSource.onmessage = (event) => {
+                const rawData = event.data;
+                // Fix: Robust JSON stream parsing
+                // Split concatenated JSON objects directly if they appear as `}{`
+                // This is a common issue with some stream buffers or proxies
+                let chunks = [];
+                let start = 0;
+                while (start < rawData.length) {
+                     let end = rawData.indexOf('}{', start);
+                     if (end === -1) end = rawData.length;
+                     else end += 1; // Include the closing brace
+                     chunks.push(rawData.substring(start, end));
+                     start = end;
+                }
+
+                chunks.forEach(data => {
+                    try {
+                        const parsed = JSON.parse(data);
+                        // Recursively extracting text
+                        function extractContent(obj) {
+                            if (typeof obj === 'string') return obj;
+                            if (!obj || typeof obj !== 'object') return '';
+                            
+                            // Top priority fields
+                            if (obj.text) return obj.text;
+                            if (obj.content) return obj.content;
+                            
+                            // Nested fields
+                            if (obj.output) return extractContent(obj.output);
+                            if (obj.result) return extractContent(obj.result);
+                            if (obj.data) return extractContent(obj.data);
+                            // OpenAI style
+                            if (obj.choices && obj.choices[0]) return extractContent(obj.choices[0].delta || obj.choices[0].message);
+                            
+                            return ''; // Don't return JSON string fallback, it causes raw JSON display
+                        }
+
+                        const content = extractContent(parsed);
+                        if (content) {
+                            fullContent += content;
+                        }
+                    } catch (e) {
+                        // If parse fails, it might be raw text or special signals
+                        if (data !== '[DONE]') {
+                             // Only append if it looks like safe text, avoiding partial JSON fragments
+                             if (!data.trim().startsWith('{') && !data.trim().startsWith('}')) {
+                                fullContent += data;
+                             }
+                        }
+                    }
+                });
+                updateLastAIMessage(fullContent);
+                // 自动滚动到底部 (可选：当用户没有向上滚动时)
+                scrollToBottom();
+            };
+
+            currentEventSource.onerror = (err) => {
+                console.error('Stream Error:', err);
+                stopGeneration();
+            };
+        }
+
+        // 过滤 <think> 内容，但保留 Markdown 格式
+        function filterContent(content, isRendering) {
+             if (!content) return '';
+             // 只替换 <think> 标签块，保留其他所有字符
+             // 1. 如果有完整的 <think>...</think>，去掉它
+             let result = content.replace(/<think>[\s\S]*?<\/think>/g, '');
+             
+             // 2. 如果只有开始标签 <think>（流式未结束），去掉开始标签及之后的所有内容
+             const thinkStart = result.indexOf('<think>');
+             if (thinkStart !== -1) {
+                 result = result.substring(0, thinkStart);
+             }
+             
+             // 3. 简单的标签清理（以防万一），但不要误伤 Markdown
+             // 移除孤立的标签
+             result = result.replace(/<\/?think>/g, '');
+             
+             return result.trim();
+        }
+        
+        function stopGeneration() {
+            if (currentEventSource) {
+                currentEventSource.close();
+                currentEventSource = null;
+            }
+            isGenerating = false;
+            saveChats(); // 生成停止时保存
+            updateSendButton();
+        }
+
+        function updateSendButton() {
+            const sendIcon = document.getElementById('sendIcon');
+            const loadingIcon = document.getElementById('loadingIcon');
+            const btn = document.getElementById('sendButton');
+            
+            if (isGenerating) {
+                sendIcon.classList.add('hidden');
+                loadingIcon.classList.remove('hidden');
+                btn.onclick = stopGeneration;
+                btn.classList.add('from-red-500', 'to-pink-600');
+                btn.classList.remove('from-indigo-500', 'to-purple-600');
+            } else {
+                sendIcon.classList.remove('hidden');
+                loadingIcon.classList.add('hidden');
+                btn.onclick = sendMessage;
+                btn.classList.remove('from-red-500', 'to-pink-600');
+                btn.classList.add('from-indigo-500', 'to-purple-600');
+            }
+        }
+
+        function handleKeyDown(e) {
+            if (e.isComposing || e.keyCode === 229) return;
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+            sidebar.classList.toggle('absolute');
+            sidebar.classList.toggle('z-20');
+            sidebar.classList.toggle('h-full');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
