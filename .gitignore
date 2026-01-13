@@ -43,3 +43,7 @@ build/
 ### Temp ###
 git-cloned-repo/
 xfg-dev-tech-app/cloned-repo/
+
+### Claude Code ###
+.claude/settings.local.json
+.claude/TEMP_REQ_*.md
