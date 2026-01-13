@@ -14,6 +14,7 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
@@ -54,9 +55,20 @@ public class AiDomainService {
     }
 
     /**
-     * RAG 流式对话
+     * RAG 流式对话（支持多知识库）
+     * 使用 OR 策略合并多个知识库的检索结果
+     *
+     * @param model   模型名称
+     * @param ragTags 知识库标签列表，为空则走普通对话
+     * @param message 用户消息
      */
-    public Flux<ChatResponse> generateStreamRag(String model, String ragTag, String message) {
+    public Flux<ChatResponse> generateStreamRag(String model, List<String> ragTags, String message) {
+        // 如果没有选择知识库，走普通对话流程
+        if (CollectionUtils.isEmpty(ragTags)) {
+            log.info("【RAG】未选择知识库，走普通对话流程");
+            return generateStream(model, message);
+        }
+
         String SYSTEM_PROMPT = """
                 请根据【参考文档】部分的信息来回答用户的问题。
                 回答时要表现得像你本来就知道这些信息一样，不要提及"根据文档"之类的话。
@@ -66,13 +78,21 @@ public class AiDomainService {
                 {documents}
                 """;
 
+        // 构建 OR 过滤表达式：knowledge == 'doc1' || knowledge == 'doc2'
+        String filterExpression = ragTags.stream()
+                .map(tag -> "knowledge == '" + tag + "'")
+                .collect(Collectors.joining(" || "));
+
+        log.info("【RAG】多知识库检索，过滤表达式: {}", filterExpression);
+
         SearchRequest request = SearchRequest.builder()
                 .query(message)
                 .topK(5)
-                .filterExpression("knowledge == '" + ragTag + "'")
+                .filterExpression(filterExpression)
                 .build();
 
         List<Document> documents = pgVectorStore.similaritySearch(request);
+        log.info("【RAG】检索到 {} 条相关文档", documents.size());
 
         String documentCollectors = documents.stream()
                 .map(Document::getText)

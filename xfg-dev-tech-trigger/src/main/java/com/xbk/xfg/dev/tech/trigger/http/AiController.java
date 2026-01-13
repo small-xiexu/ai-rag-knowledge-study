@@ -8,6 +8,8 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.util.List;
+
 /**
  * AI 对话控制器
  * DDD 架构 - HTTP 适配器层，实现应用服务接口
@@ -48,15 +50,16 @@ public class AiController implements IAiService {
     }
 
     /**
-     * RAG 流式对话接口
-     * GET /api/v1/ai/generate_stream_rag?model=gpt-4o&ragTag=test&message=你好
+     * RAG 流式对话接口（支持多知识库）
+     * 单个：GET /api/v1/ai/generate_stream_rag?ragTags=doc1&message=你好
+     * 多个：GET /api/v1/ai/generate_stream_rag?ragTags=doc1&ragTags=doc2&message=你好
      */
     @Override
     @GetMapping(value = "generate_stream_rag", produces = "text/event-stream")
     public Flux<ChatResponse> generateStreamRag(
             @RequestParam(value = "model", required = false) String model,
-            @RequestParam("ragTag") String ragTag,
+            @RequestParam(value = "ragTags", required = false) List<String> ragTags,
             @RequestParam("message") String message) {
-        return aiDomainService.generateStreamRag(model, ragTag, message);
+        return aiDomainService.generateStreamRag(model, ragTags, message);
     }
 }

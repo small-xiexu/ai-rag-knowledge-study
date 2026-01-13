@@ -19,7 +19,13 @@
       "Bash(curl:*)",
       "Bash(wc:*)",
       "Bash(docker logs:*)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(python3:*)",
+      "Bash(kill:*)",
+      "Bash(pkill:*)",
+      "Bash(xargs kill -9)",
+      "Bash(open http://localhost:8090/ai-chat.html)",
+      "Bash(git add:*)"
     ]
   }
 }

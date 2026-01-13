@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 助手 - 智能对话系统</title>
     <!-- Tailwind CSS -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2310a37f'/%3E%3Cstop offset='100%25' stop-color='%231a7f64'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='url(%23g)'/%3E%3Cpath d='M50 25 L50 50 L70 60' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='50' cy='50' r='8' fill='white'/%3E%3Ccircle cx='30' cy='40' r='5' fill='white' opacity='0.7'/%3E%3Ccircle cx='70' cy='40' r='5' fill='white' opacity='0.7'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -159,10 +159,23 @@
                     </div>
                     
                     <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">RAG 知识库</label>
-                        <select id="ragTagSelect" class="w-full h-9 px-3 text-xs font-medium bg-purple-50/50 border border-purple-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300 text-purple-700 transition-all cursor-pointer hover:bg-purple-50">
-                            <option value="">不使用知识库</option>
-                        </select>
+                        <div class="flex items-center justify-between px-1">
+                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">RAG 知识库</label>
+                            <span id="ragTagCount" class="text-[10px] text-purple-500 font-medium">0/10</span>
+                        </div>
+                        <!-- 已选标签区 -->
+                        <div id="selectedRagTags" class="flex flex-wrap gap-1.5 min-h-[32px] p-2 bg-purple-50/50 border border-purple-100 rounded-lg">
+                            <span class="text-[10px] text-gray-400 italic">未选择知识库</span>
+                        </div>
+                        <!-- 操作按钮 -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="openRagTagSelector()" id="addRagTagBtn" class="flex-1 py-1.5 text-[10px] font-medium text-purple-600 bg-purple-100 hover:bg-purple-200 rounded-lg transition-colors flex items-center justify-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                添加
+                            </button>
+                            <button onclick="selectAllRagTags()" class="py-1.5 px-2 text-[10px] font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">全选</button>
+                            <button onclick="clearAllRagTags()" class="py-1.5 px-2 text-[10px] font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">清空</button>
+                        </div>
                     </div>
                     
                     <div class="space-y-1.5">
@@ -415,21 +428,96 @@
             }
         }
 
-        // 加载知识库列表填充下拉框
+        // 知识库多选相关变量
+        let allRagTags = [];          // 所有可用的知识库列表
+        let selectedRagTags = [];     // 已选中的知识库
+        const MAX_RAG_TAGS = 10;      // 最大选择数
+
+        // 加载知识库列表
         async function loadRagTagList() {
             try {
                 const response = await fetch('/api/v1/rag/query_rag_tag_list');
                 const result = await response.json();
                 if (result.code === '0000' && result.data) {
-                    const select = document.getElementById('ragTagSelect');
-                    result.data.forEach(tag => {
-                        const option = document.createElement('option');
-                        option.value = tag;
-                        option.textContent = tag;
-                        select.appendChild(option);
-                    });
+                    allRagTags = result.data;
+                    renderSelectedRagTags();
                 }
             } catch (e) { console.error('加载知识库列表失败:', e); }
+        }
+
+        // 渲染已选标签
+        function renderSelectedRagTags() {
+            const container = document.getElementById('selectedRagTags');
+            const countEl = document.getElementById('ragTagCount');
+            const addBtn = document.getElementById('addRagTagBtn');
+
+            countEl.textContent = `${selectedRagTags.length}/${MAX_RAG_TAGS}`;
+
+            if (selectedRagTags.length === 0) {
+                container.innerHTML = '<span class="text-[10px] text-gray-400 italic">未选择知识库</span>';
+            } else {
+                container.innerHTML = selectedRagTags.map(tag => `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-200 text-purple-700 text-[10px] font-medium rounded-full">
+                        ${escapeHtml(tag)}
+                        <button onclick="removeRagTag('${escapeHtml(tag)}')" class="hover:text-purple-900 transition-colors">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </span>
+                `).join('');
+            }
+
+            // 达到上限时禁用添加按钮
+            if (selectedRagTags.length >= MAX_RAG_TAGS) {
+                addBtn.disabled = true;
+                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                addBtn.disabled = false;
+                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // 打开知识库选择弹窗
+        function openRagTagSelector() {
+            if (selectedRagTags.length >= MAX_RAG_TAGS) {
+                showModalAlert({ title: '已达上限', message: `最多只能选择 ${MAX_RAG_TAGS} 个知识库`, confirmText: '我知道了' });
+                return;
+            }
+            const availableTags = allRagTags.filter(t => !selectedRagTags.includes(t));
+            if (availableTags.length === 0) {
+                showModalAlert({ title: '无可选知识库', message: '所有知识库已选中或暂无可用知识库', confirmText: '好的' });
+                return;
+            }
+            // 简单实现：使用 prompt 多选（生产环境建议用模态框）
+            const input = prompt(`可选知识库：\n${availableTags.join('\n')}\n\n请输入要添加的知识库名称（多个用逗号分隔）：`);
+            if (input) {
+                const toAdd = input.split(',').map(s => s.trim()).filter(s => availableTags.includes(s));
+                const remaining = MAX_RAG_TAGS - selectedRagTags.length;
+                selectedRagTags.push(...toAdd.slice(0, remaining));
+                renderSelectedRagTags();
+            }
+        }
+
+        // 移除单个标签
+        function removeRagTag(tag) {
+            selectedRagTags = selectedRagTags.filter(t => t !== tag);
+            renderSelectedRagTags();
+        }
+
+        // 全选
+        function selectAllRagTags() {
+            selectedRagTags = allRagTags.slice(0, MAX_RAG_TAGS);
+            renderSelectedRagTags();
+        }
+
+        // 清空
+        function clearAllRagTags() {
+            selectedRagTags = [];
+            renderSelectedRagTags();
+        }
+
+        // 获取已选知识库列表
+        function getSelectedRagTags() {
+            return selectedRagTags;
         }
 
         function createNewChat() {
@@ -799,7 +887,8 @@
         }
 
         function startStreamRequest(message) {
-            const ragTag = document.getElementById('ragTagSelect').value;
+            // 获取已选知识库列表
+            const ragTags = getSelectedRagTags();
             const model = modelLocked || document.getElementById('modelSelect').value;
             const chat = chats.find(c => c.id === currentChatId);
             if (chat) {
@@ -817,9 +906,14 @@
                 return;
             }
 
-            const url = ragTag 
-                ? `/api/v1/ai/generate_stream_rag?ragTag=${encodeURIComponent(ragTag)}&message=${encodeURIComponent(message)}&model=${encodeURIComponent(model)}`
-                : `/api/v1/ai/generate_stream?message=${encodeURIComponent(message)}&model=${encodeURIComponent(model)}`;
+            // 构建 URL：支持多知识库
+            let url;
+            if (ragTags.length > 0) {
+                const ragTagsParam = ragTags.map(t => `ragTags=${encodeURIComponent(t)}`).join('&');
+                url = `/api/v1/ai/generate_stream_rag?${ragTagsParam}&message=${encodeURIComponent(message)}&model=${encodeURIComponent(model)}`;
+            } else {
+                url = `/api/v1/ai/generate_stream?message=${encodeURIComponent(message)}&model=${encodeURIComponent(model)}`;
+            }
 
             currentEventSource = new EventSource(url);
             let fullContent = '';
