@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
 import com.xbk.xfg.dev.tech.domain.strategy.ChatClientStrategy;
+import com.xbk.xfg.dev.tech.domain.strategy.embedding.EmbeddingStrategy;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,6 +87,12 @@ public class DynamicChatClientFactory {
      */
     @Resource
     private List<ChatClientStrategy> strategies;
+
+    /**
+     * Embedding 策略列表，用于测试 Embedding 连接
+     */
+    @Resource
+    private List<EmbeddingStrategy> embeddingStrategies;
 
     // ==================== 缓存与并发控制 ====================
 
@@ -303,21 +310,67 @@ public class DynamicChatClientFactory {
      */
     public List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO> testConnection(LlmProviderConfigDTO config) {
         List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO> results = new java.util.ArrayList<>();
-        
-        // 1. 确定要测试的模型列表
+
+        // 判断是否有 Chat 功能（有 models 或 defaultModel）
+        boolean hasChatCapability = (config.getModels() != null && !config.getModels().isEmpty())
+                || (config.getDefaultModel() != null && !config.getDefaultModel().isEmpty());
+
+        // 判断是否有 Embedding 功能
+        boolean hasEmbeddingCapability = config.getEmbeddingModel() != null && !config.getEmbeddingModel().isEmpty();
+
+        // 如果既没有 Chat 也没有 Embedding，返回错误
+        if (!hasChatCapability && !hasEmbeddingCapability) {
+            results.add(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO.builder()
+                    .model("无可测试模型")
+                    .success(false)
+                    .errorInfo("配置中未指定任何模型（Chat 或 Embedding）")
+                    .build());
+            return results;
+        }
+
+        // 测试 Embedding 模型（如果有）
+        if (hasEmbeddingCapability) {
+            try {
+                var embeddingModel = embeddingStrategies.stream()
+                        .filter(s -> s.supports(config.getProviderType()))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("不支持的 Embedding 提供商: " + config.getProviderType()))
+                        .createEmbeddingModel(config);
+
+                var testResult = embeddingModel.embed("test");
+                log.info("Embedding 测试成功! 配置: {}, 模型: {}, 向量维度: {}",
+                        config.getName(), config.getEmbeddingModel(), testResult.length);
+
+                results.add(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO.builder()
+                        .model(config.getEmbeddingModel() + " (Embedding)")
+                        .success(true)
+                        .build());
+            } catch (Exception e) {
+                log.warn("Embedding 测试失败: 配置: {}, 模型: {}, 错误: {}",
+                        config.getName(), config.getEmbeddingModel(), e.getMessage());
+                results.add(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO.builder()
+                        .model(config.getEmbeddingModel() + " (Embedding)")
+                        .success(false)
+                        .errorInfo(e.getMessage())
+                        .build());
+            }
+        }
+
+        // 如果没有 Chat 功能，直接返回 Embedding 测试结果
+        if (!hasChatCapability) {
+            return results;
+        }
+
+        // 测试 Chat 模型
         List<String> modelsToTest = new java.util.ArrayList<>();
-        
+
         // 优先使用 models列表
         if (config.getModels() != null && !config.getModels().isEmpty()) {
             modelsToTest.addAll(config.getModels());
-        } 
+        }
         // 其次使用 defaultModel
         else if (config.getDefaultModel() != null && !config.getDefaultModel().isEmpty()) {
             modelsToTest.add(config.getDefaultModel());
-        }
-        // 最后使用系统默认
-        else {
-            modelsToTest.add(getTestModel(config));
         }
 
         // 去重
@@ -332,7 +385,7 @@ public class DynamicChatClientFactory {
             // 如果连客户端都创建失败，所有模型都标记为失败
             for (String model : modelsToTest) {
                 results.add(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO.builder()
-                        .model(model)
+                        .model(model + " (Chat)")
                         .success(false)
                         .errorInfo("客户端创建失败: " + e.getMessage())
                         .build());
@@ -358,7 +411,7 @@ public class DynamicChatClientFactory {
                         config.getProviderType(), model, content);
                 
                 results.add(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO.builder()
-                        .model(model)
+                        .model(model + " (Chat)")
                         .success(true)
                         .build());
                         
@@ -367,7 +420,7 @@ public class DynamicChatClientFactory {
                         config.getProviderType(), model, e.getMessage());
                 
                 results.add(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO.builder()
-                        .model(model)
+                        .model(model + " (Chat)")
                         .success(false)
                         .errorInfo(e.getMessage())
                         .build());

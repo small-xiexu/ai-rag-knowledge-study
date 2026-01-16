@@ -106,6 +106,14 @@ public class AiDomainService {
             documents = List.of();
         }
         log.info("【RAG】检索到 {} 条相关文档", documents.size());
+        // 打印检索到的文档来源，方便调试
+        documents.forEach(doc -> {
+            String knowledge = doc.getMetadata().get("knowledge") != null
+                    ? doc.getMetadata().get("knowledge").toString() : "未知";
+            String contentPreview = doc.getText().length() > 50
+                    ? doc.getText().substring(0, 50) + "..." : doc.getText();
+            log.info("【RAG】文档来源: {}, 内容预览: {}", knowledge, contentPreview);
+        });
         // 低相关时不注入文档，直接走普通对话
         if (documents.isEmpty()) {
             log.info("【RAG】相似度低于阈值 {}，退回普通对话", RAG_SIMILARITY_THRESHOLD);

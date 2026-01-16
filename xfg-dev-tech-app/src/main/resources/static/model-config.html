@@ -33,8 +33,19 @@
         }
 
         .config-card.active {
-            border-color: #10b981;
+            border-color: #10b981 !important;
             background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.02) 100%);
+        }
+
+        .config-card.active-embedding {
+            border-color: #6366f1 !important;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(99, 102, 241, 0.02) 100%);
+        }
+
+        .config-card.active.active-embedding {
+            border-color: #10b981 !important;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.03) 0%, rgba(99, 102, 241, 0.03) 100%);
+            box-shadow: 0 0 0 2px #6366f1 inset;
         }
 
         @keyframes slideIn {
@@ -97,11 +108,11 @@
             border-radius: 12px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 12px;
             animation: slideIn 0.3s ease-out;
             backdrop-filter: blur(10px);
-            max-width: 400px;
+            max-width: 450px;
         }
 
         .toast-success {
@@ -124,6 +135,8 @@
             flex: 1;
             font-size: 14px;
             font-weight: 500;
+            white-space: pre-line;
+            line-height: 1.5;
         }
 
         .toast-close {
@@ -533,80 +546,6 @@
             document.getElementById('testResultModal').classList.add('hidden');
         }
 
-        // 测试连接
-        async function testConnection(id) {
-            const config = configs.find(c => c.id === id);
-            if (!config) return;
-            
-            const btn = document.getElementById(`test-btn-${id}`);
-            const originalText = btn.innerHTML;
-            btn.innerHTML = `<div class="flex justify-center items-center"><svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg></div>`;
-            btn.disabled = true;
-
-            try {
-                const response = await fetch(`${API_BASE}/configs/test`, { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config)
-                });
-                const result = await response.json();
-
-                // 只要是 "0000" 就说明有结果返回（可能是部分成功，也可能是全部成功）
-                // 或者是 "5001" (所有都失败)
-                if (result.code === '0000' || result.code === '5001') {
-                    const testResults = result.data || [];
-                    const allSuccess = testResults.every(r => r.success);
-                    
-                    if (allSuccess && testResults.length > 0) {
-                        // 全部成功，显示绿色勾
-                        btn.innerHTML = `<div class="flex justify-center items-center"><svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>`;
-                        showToast('success', `「${config.name}」所有模型连接测试成功！`);
-                        setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
-                    } else {
-                        // 部分成功或失败，显示详情弹窗
-                        showTestResultModal(config.name, testResults);
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
-                    }
-                } else {
-                    showToast('error', `「${config.name}」连接失败: ${result.info || '未知错误'}`);
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }
-            } catch (error) {
-                console.error('测试失败:', error);
-                showToast('error', `「${config.name}」网络错误，测试失败`);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        }
-
-        // 显示测试结果详情
-        function showTestResultModal(configName, results) {
-            document.getElementById('testResultTitle').textContent = configName;
-            const listContainer = document.getElementById('testResulList');
-            
-            if (!results || results.length === 0) {
-                listContainer.innerHTML = '<div class="p-6 text-center text-gray-500">无测试结果</div>';
-            } else {
-                listContainer.innerHTML = results.map(r => `
-                    <div class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3">
-                        <div class="mt-0.5 flex-shrink-0">
-                            ${r.success 
-                                ? `<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
-                                : `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
-                            }
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h4 class="text-sm font-medium ${r.success ? 'text-gray-900' : 'text-red-700'}">${escapeHtml(r.model)}</h4>
-                            ${!r.success ? `<p class="text-xs text-red-500 mt-1 break-all">${escapeHtml(r.errorInfo || '未知错误')}</p>` : ''}
-                        </div>
-                    </div>
-                `).join('');
-            }
-            
-            document.getElementById('testResultModal').classList.remove('hidden');
-        }
         // 提供商类型映射
         const providerLabels = {
             'OPENAI': { label: 'OpenAI', color: 'bg-green-100 text-green-700' },
@@ -689,7 +628,7 @@
                 const hasEmbeddingCapability = !!config.embeddingModel;
                 
                 return `
-                    <div class="config-card ${config.active ? 'active' : ''} p-5 bg-white rounded-xl border-2 ${config.active ? 'border-green-400' : 'border-gray-100'}" style="animation-delay: ${index * 0.05}s">
+                    <div class="config-card ${config.active ? 'active' : ''} ${config.activeForEmbedding ? 'active-embedding' : ''} p-5 bg-white rounded-xl border-2 border-gray-100" style="animation-delay: ${index * 0.05}s">
                         <div class="flex items-start justify-between mb-4">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -993,48 +932,62 @@
 
 
         // 测试连接
-        // 测试连接
         async function testConnection(id) {
-            console.log('Testing connection for ID:', id, typeof id);
-            // 使用 == 兼容类型
             const config = configs.find(c => c.id == id);
-            console.log('Config found:', config);
-            
             if (!config) {
                 console.error('Config not found for ID:', id);
                 return;
             }
-            
+
             const btn = document.getElementById(`test-btn-${id}`);
             const originalText = btn.innerHTML;
             btn.innerHTML = `<div class="flex justify-center items-center"><svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg></div>`;
             btn.disabled = true;
 
             try {
-                const response = await fetch(`${API_BASE}/configs/test`, { 
+                const response = await fetch(`${API_BASE}/configs/test`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
                 });
                 const result = await response.json();
 
-                if (result.code === '0000' && Array.isArray(result.data)) {
-                    // 恢复按钮状态
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    
-                    // 渲染结果列表
+                // 恢复按钮状态
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+
+                if ((result.code === '0000' || result.code === '5001') && Array.isArray(result.data)) {
                     const results = result.data;
+                    const successModels = results.filter(r => r.success).map(r => r.model);
+                    const failModels = results.filter(r => !r.success).map(r => r.model);
+
+                    // 构建换行显示的 Toast 消息
+                    let toastMsg = `「${config.name}」测试结果：`;
+                    if (successModels.length > 0) {
+                        toastMsg += `\n✅ 成功：\n${successModels.map(m => '  • ' + m).join('\n')}`;
+                    }
+                    if (failModels.length > 0) {
+                        toastMsg += `\n❌ 失败：\n${failModels.map(m => '  • ' + m).join('\n')}`;
+                    }
+
+                    // 显示 Toast 提示
+                    if (failModels.length === 0) {
+                        showToast('success', toastMsg);
+                    } else {
+                        showToast('error', toastMsg);
+                    }
+
+                    // 渲染结果列表并显示弹窗
                     const listContainer = document.getElementById('testResulList');
                     document.getElementById('testResultTitle').textContent = config.name;
-                    
+
                     if (!results || results.length === 0) {
                         listContainer.innerHTML = '<div class="p-6 text-center text-gray-500">无测试结果</div>';
                     } else {
                         listContainer.innerHTML = results.map(r => `
                             <div class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3">
                                 <div class="mt-0.5 flex-shrink-0">
-                                    ${r.success 
+                                    ${r.success
                                         ? `<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
                                         : `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
                                     }
@@ -1046,14 +999,12 @@
                             </div>
                         `).join('');
                     }
-                    
-                    // 显示弹窗
+
+                    // 显示详情弹窗
                     document.getElementById('testResultModal').classList.remove('hidden');
-                    
+
                 } else {
                     showToast('error', `「${config.name}」连接失败: ${result.info || '未知错误'}`);
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
                 }
             } catch (error) {
                 console.error('测试失败:', error);

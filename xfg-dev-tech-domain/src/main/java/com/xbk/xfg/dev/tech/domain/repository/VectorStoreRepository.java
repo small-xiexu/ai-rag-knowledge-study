@@ -73,4 +73,13 @@ public interface VectorStoreRepository {
      * 统计向量表总记录数
      */
     long countAll();
+
+    /**
+     * 修改向量列维度（需要先清空表）
+     * 执行流程：删除索引 -> 修改列类型 -> 重建索引
+     *
+     * @param dimension 新的向量维度
+     * @return 是否成功
+     */
+    boolean alterVectorDimension(int dimension);
 }

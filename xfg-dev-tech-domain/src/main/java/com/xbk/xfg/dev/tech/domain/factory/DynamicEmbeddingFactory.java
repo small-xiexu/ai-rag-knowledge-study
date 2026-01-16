@@ -102,7 +102,7 @@ public class DynamicEmbeddingFactory {
                             .vectorCount(vectorCount)
                             .build();
                 }
-                clearAllKnowledge();
+                clearAllKnowledge(newConfig.getEmbeddingDimension());
             }
 
             setActiveEmbeddingConfigId(configId);
@@ -167,16 +167,21 @@ public class DynamicEmbeddingFactory {
                 .createEmbeddingModel(config);
     }
 
-    private void clearAllKnowledge() {
+    private void clearAllKnowledge(int newDimension) {
         boolean truncated = vectorStoreRepository.truncate();
         if (!truncated) {
             log.warn("清空向量表失败，请检查数据库连接");
+        }
+        // 修改向量维度
+        boolean altered = vectorStoreRepository.alterVectorDimension(newDimension);
+        if (!altered) {
+            log.warn("修改向量维度失败，请检查数据库连接");
         }
         RList<String> ragTags = redissonClient.getList(RAG_TAG_KEY);
         if (!CollectionUtils.isEmpty(ragTags)) {
             ragTags.clear();
         }
-        log.warn("所有知识库已被清空！向量数据已永久删除");
+        log.warn("所有知识库已被清空！向量数据已永久删除，维度已修改为 {}", newDimension);
     }
 
     private String getActiveEmbeddingConfigId() {

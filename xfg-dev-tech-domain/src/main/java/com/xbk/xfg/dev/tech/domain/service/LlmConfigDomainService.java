@@ -272,12 +272,36 @@ public class LlmConfigDomainService {
             // 尝试创建客户端并测试连接
             List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO> results = dynamicChatClientFactory.testConnection(config);
 
-            // 只要有一个成功，就返回成功 Code (前端根据 results 具体判断展示)
-            boolean anySuccess = results.stream().anyMatch(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO::isSuccess);
-            
+            // 分组统计成功和失败的模型
+            List<String> successModels = results.stream()
+                    .filter(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO::isSuccess)
+                    .map(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO::getModel)
+                    .toList();
+            List<String> failModels = results.stream()
+                    .filter(r -> !r.isSuccess())
+                    .map(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO::getModel)
+                    .toList();
+
+            // 根据结果生成精确的提示信息，列出具体模型名称
+            String info;
+            String code;
+            if (failModels.isEmpty()) {
+                // 全部成功
+                code = "0000";
+                info = "所有模型连接成功：" + String.join(", ", successModels);
+            } else if (!successModels.isEmpty()) {
+                // 部分成功
+                code = "0000";
+                info = "成功：" + String.join(", ", successModels) + "；失败：" + String.join(", ", failModels);
+            } else {
+                // 全部失败
+                code = "5001";
+                info = "所有模型连接失败：" + String.join(", ", failModels);
+            }
+
             return Response.<List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO>>builder()
-                    .code(anySuccess ? "0000" : "5001")
-                    .info(anySuccess ? "部分或全部连接成功" : "所有模型连接失败")
+                    .code(code)
+                    .info(info)
                     .data(results)
                     .build();
         } catch (Exception e) {

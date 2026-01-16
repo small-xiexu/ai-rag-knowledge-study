@@ -157,4 +157,27 @@ public class VectorStoreRepositoryImpl implements VectorStoreRepository {
             return 0L;
         }
     }
+
+    @Override
+    public boolean alterVectorDimension(int dimension) {
+        try {
+            // 1. 删除索引（如果存在）
+            jdbcTemplate.execute("DROP INDEX IF EXISTS spring_ai_vector_index");
+            log.info("【Repository】已删除向量索引");
+
+            // 2. 修改向量列维度
+            String alterSql = String.format("ALTER TABLE vector_store ALTER COLUMN embedding TYPE vector(%d)", dimension);
+            jdbcTemplate.execute(alterSql);
+            log.info("【Repository】已修改向量维度为 {}", dimension);
+
+            // 3. 重建索引
+            jdbcTemplate.execute("CREATE INDEX spring_ai_vector_index ON vector_store USING HNSW (embedding vector_cosine_ops)");
+            log.info("【Repository】已重建向量索引");
+
+            return true;
+        } catch (Exception e) {
+            log.error("【Repository】修改向量维度失败", e);
+            return false;
+        }
+    }
 }

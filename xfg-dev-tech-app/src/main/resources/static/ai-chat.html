@@ -411,19 +411,26 @@
                     updateModelOptions(activeRes.data);
                     lastConfigId = activeRes.data.id;
                 } else if (configs.length > 0) {
-                    // 如果没有激活的（不太可能），默认选中第一个但不激活（或者自动激活？）
-                    // 这里仅UI选中
+                    // 如果没有激活的（不太可能），默认选中第一个但不激活
                     select.value = configs[0].id;
                     updateModelOptions(configs[0]);
                     lastConfigId = configs[0].id;
                 } else {
                      select.innerHTML = '<option disabled>暂无配置，请去添加</option>';
                 }
-                // 配置切换后解除锁定，按新配置选择模型
-                modelLocked = null;
+
+                // 【修复】页面刷新后恢复当前会话保存的模型选择
                 const chat = chats.find(c => c.id === currentChatId);
-                const selectedModel = document.getElementById('modelSelect').value || null;
-                if (chat) {
+                if (chat && chat.model) {
+                    // 尝试恢复会话保存的模型
+                    setModelSelect(chat.model);
+                    // 如果会话已有消息，锁定模型
+                    if (chat.messages && chat.messages.length > 0) {
+                        modelLocked = chat.model;
+                    }
+                } else if (chat) {
+                    // 会话没有保存模型，使用当前选择的默认模型
+                    const selectedModel = document.getElementById('modelSelect').value || null;
                     chat.model = selectedModel;
                     saveChats();
                     renderChatList();
@@ -669,6 +676,8 @@
             chats.unshift(chat);
             saveChats();
             renderChatList();
+            // 【修复】新建对话时显式解除模型锁定
+            modelLocked = null;
             selectChat(chat.id);
         }
 
@@ -971,6 +980,10 @@
             
             console.log('Sending message:', message);
 
+            // 【修复】立即设置生成状态，防止快速双击导致消息重复
+            isGenerating = true;
+            updateSendButton();
+
             input.value = '';
             input.style.height = 'auto';
             input.focus();
@@ -979,9 +992,6 @@
 
             addMessage('user', message);
             renderMessages();
-
-            isGenerating = true;
-            updateSendButton();
             
             // 延迟一点添加 AI 消息，防止极端情况下 UI 抖动或重复
             requestAnimationFrame(() => {
