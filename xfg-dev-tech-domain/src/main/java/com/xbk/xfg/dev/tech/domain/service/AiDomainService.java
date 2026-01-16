@@ -32,6 +32,8 @@ import java.util.stream.Collectors;
 @Service
 public class AiDomainService {
 
+    private static final double RAG_SIMILARITY_THRESHOLD = 0.7d;
+
     @Resource
     private DynamicChatClientFactory dynamicChatClientFactory;
 
@@ -50,8 +52,15 @@ public class AiDomainService {
      * 流式生成
      */
     public Flux<ChatResponse> generateStream(String model, String message) {
-        ChatClientWrapper client = dynamicChatClientFactory.getActiveChatClient();
-        return client.stream(new Prompt(message, createOptions(model)));
+        try {
+            ChatClientWrapper client = dynamicChatClientFactory.getActiveChatClient();
+            log.info("执行流式生成 - 客户端: {}, 模型: {}", client.getClass().getSimpleName(), model);
+            return client.stream(new Prompt(message, createOptions(model)))
+                    .doOnError(e -> log.error("调用 ChatClient 流式接口失败", e));
+        } catch (Exception e) {
+            log.error("根据配置获取 ChatClient 失败", e);
+            return Flux.error(e);
+        }
     }
 
     /**
@@ -88,11 +97,20 @@ public class AiDomainService {
         SearchRequest request = SearchRequest.builder()
                 .query(message)
                 .topK(5)
+                .similarityThreshold(RAG_SIMILARITY_THRESHOLD)
                 .filterExpression(filterExpression)
                 .build();
 
         List<Document> documents = pgVectorStore.similaritySearch(request);
+        if (documents == null) {
+            documents = List.of();
+        }
         log.info("【RAG】检索到 {} 条相关文档", documents.size());
+        // 低相关时不注入文档，直接走普通对话
+        if (documents.isEmpty()) {
+            log.info("【RAG】相似度低于阈值 {}，退回普通对话", RAG_SIMILARITY_THRESHOLD);
+            return generateStream(model, message);
+        }
 
         String documentCollectors = documents.stream()
                 .map(Document::getText)
@@ -105,8 +123,15 @@ public class AiDomainService {
         messages.add(new UserMessage(message));
         messages.add(ragMessage);
 
-        ChatClientWrapper client = dynamicChatClientFactory.getActiveChatClient();
-        return client.stream(new Prompt(messages, createOptions(model)));
+        try {
+            ChatClientWrapper client = dynamicChatClientFactory.getActiveChatClient();
+            log.info("执行RAG流式生成 - 客户端: {}, 模型: {}", client.getClass().getSimpleName(), model);
+            return client.stream(new Prompt(messages, createOptions(model)))
+                    .doOnError(e -> log.error("调用 ChatClient RAG流式接口失败", e));
+        } catch (Exception e) {
+            log.error("RAG模式下获取 ChatClient 失败", e);
+            return Flux.error(e);
+        }
     }
 
     /**

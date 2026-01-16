@@ -123,7 +123,7 @@ public class LlmConfigController implements ILlmConfigService {
      */
     @Override
     @PostMapping("configs/test")
-    public Response<Boolean> testConnection(@RequestBody LlmProviderConfigDTO config) {
+    public Response<List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO>> testConnection(@RequestBody LlmProviderConfigDTO config) {
         return llmConfigDomainService.testConnection(config);
     }
 }

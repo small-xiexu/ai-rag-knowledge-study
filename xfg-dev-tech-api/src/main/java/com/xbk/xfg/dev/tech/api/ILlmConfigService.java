@@ -70,5 +70,5 @@ public interface ILlmConfigService {
      * 测试配置连接
      * @param config 配置信息
      */
-    Response<Boolean> testConnection(LlmProviderConfigDTO config);
+    Response<List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO>> testConnection(LlmProviderConfigDTO config);
 }

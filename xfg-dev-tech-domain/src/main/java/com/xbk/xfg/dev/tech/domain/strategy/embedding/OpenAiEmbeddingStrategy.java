@@ -17,7 +17,9 @@ public class OpenAiEmbeddingStrategy implements EmbeddingStrategy {
 
     @Override
     public boolean supports(String providerType) {
-        return "OPENAI".equalsIgnoreCase(providerType) || "GLM".equalsIgnoreCase(providerType);
+        return "OPENAI".equalsIgnoreCase(providerType) 
+            || "GLM".equalsIgnoreCase(providerType)
+            || "DEEPSEEK".equalsIgnoreCase(providerType);
     }
 
     @Override

@@ -267,20 +267,23 @@ public class LlmConfigDomainService {
         }
     }
 
-    public Response<Boolean> testConnection(LlmProviderConfigDTO config) {
+    public Response<List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO>> testConnection(LlmProviderConfigDTO config) {
         try {
-            // 尝试创建客户端并发送简单请求
-            boolean success = dynamicChatClientFactory.testConnection(config);
+            // 尝试创建客户端并测试连接
+            List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO> results = dynamicChatClientFactory.testConnection(config);
 
-            return Response.<Boolean>builder()
-                    .code(success ? "0000" : "5001")
-                    .info(success ? "连接成功" : "连接失败")
-                    .data(success)
+            // 只要有一个成功，就返回成功 Code (前端根据 results 具体判断展示)
+            boolean anySuccess = results.stream().anyMatch(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO::isSuccess);
+            
+            return Response.<List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO>>builder()
+                    .code(anySuccess ? "0000" : "5001")
+                    .info(anySuccess ? "部分或全部连接成功" : "所有模型连接失败")
+                    .data(results)
                     .build();
         } catch (Exception e) {
             log.error("测试连接失败", e);
-            return Response.<Boolean>builder()
-                    .code("500").info("测试连接失败: " + e.getMessage()).data(false).build();
+            return Response.<List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO>>builder()
+                    .code("500").info("测试连接失败: " + e.getMessage()).build();
         }
     }
 

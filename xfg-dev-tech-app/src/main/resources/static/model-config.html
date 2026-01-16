@@ -157,6 +157,40 @@
                 transform: translateX(100px);
             }
         }
+
+        .model-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            background: #e0e7ff;
+            color: #4338ca;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid #c7d2fe;
+            animation: tagPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        @keyframes tagPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .model-tag .remove-tag {
+            margin-left: 6px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .model-tag .remove-tag:hover {
+            background: #c7d2fe;
+            color: #312e81;
+        }
     </style>
 </head>
 <body class="flex items-center justify-center p-4">
@@ -251,11 +285,11 @@
     <div id="configModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
         <div class="modal-backdrop absolute inset-0" onclick="closeModal()"></div>
         <div class="glass-card relative z-10 w-full max-w-lg mx-4 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-4">
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-4 flex-shrink-0">
                 <h2 id="modalTitle" class="text-xl font-bold text-white">添加配置</h2>
             </div>
-            <form id="configForm" class="flex-1 flex flex-col relative" onsubmit="saveConfig(event)">
-                <div class="p-6 space-y-5 overflow-y-auto">
+            <form id="configForm" class="flex-1 flex flex-col min-h-0" onsubmit="saveConfig(event)">
+                <div class="p-6 space-y-5 overflow-y-auto flex-1 min-h-0">
                     <input type="hidden" id="configId">
                     
                     <div>
@@ -279,22 +313,18 @@
                         <p class="text-xs text-gray-500 mt-1" id="providerHint">支持 OpenAI 兼容的 API 接口</p>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Embedding 模型名称</label>
-                        <input type="text" id="embeddingModel"
-                            class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                            placeholder="例如：nomic-embed-text 或 text-embedding-3-small">
-                        <p class="text-xs text-gray-500 mt-1">留空表示该配置不支持向量化</p>
+                    <!-- 功能开关 -->
+                    <div class="flex gap-6 py-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="enableChat" class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" checked onchange="toggleSections()">
+                            <span class="text-sm font-medium text-gray-700">开启对话功能</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="enableEmbedding" class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" onchange="toggleSections()">
+                            <span class="text-sm font-medium text-gray-700">开启 Embedding 功能</span>
+                        </label>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">向量维度</label>
-                        <input type="number" id="embeddingDimension" min="1"
-                            class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                            placeholder="768 / 1536 / 3072">
-                        <p class="text-xs text-red-500 mt-1">更换不同维度的模型会清空所有知识库</p>
-                    </div>
-                    
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">API 地址 *</label>
                         <input type="url" id="baseUrl" required
@@ -308,24 +338,60 @@
                             class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                             placeholder="sk-...">
                     </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">默认模型</label>
-                        <input type="text" id="defaultModel"
-                            class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                            placeholder="例如：gpt-4o, claude-3-5-sonnet-20241022">
+
+                    <!-- 聊天配置部分 -->
+                    <div id="chatSection" class="space-y-5 pt-4 border-t border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                            对话配置
+                        </h3>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">默认模型</label>
+                            <input type="text" id="defaultModel"
+                                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                placeholder="例如：gpt-4o, claude-3-5-sonnet-20241022">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">模型列表</label>
+                            <div class="w-full px-2 py-2 border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all bg-white min-h-[46px] flex flex-wrap gap-2" onclick="document.getElementById('tagInput').focus()">
+                                <div id="tagsContainer" class="flex flex-wrap gap-2"></div>
+                                <input type="text" id="tagInput" 
+                                    class="flex-1 min-w-[120px] outline-none border-none text-sm bg-transparent px-2 py-1" 
+                                    placeholder="输入模型按回车添加..."
+                                    onkeydown="handleTagInput(event)">
+                            </div>
+                            <!-- 隐藏的原始 input 用于兼容旧逻辑（可选，但我计划直接用 new set）-->
+                            <!-- <input type="hidden" id="models"> --> 
+                            <p class="text-xs text-gray-500 mt-1">输入模型名称后按回车或逗号添加</p>
+                        </div>
                     </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">模型列表</label>
-                        <textarea id="models" rows="3"
-                            class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
-                            placeholder="每行一个模型名称，例如：gpt-4o、claude-3-5-sonnet"></textarea>
-                        <p class="text-xs text-gray-500 mt-1">手动输入模型名称，每行一个</p>
+
+                    <!-- Embedding 配置部分 -->
+                    <div id="embeddingSection" class="hidden space-y-5 pt-4 border-t border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            Embedding 配置
+                        </h3>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Embedding 模型名称</label>
+                            <input type="text" id="embeddingModel"
+                                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                placeholder="例如：nomic-embed-text 或 text-embedding-3-small">
+                            <p class="text-xs text-gray-500 mt-1">留空表示该配置不支持向量化</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">向量维度</label>
+                            <input type="number" id="embeddingDimension" min="1"
+                                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                placeholder="768 / 1536 / 3072">
+                            <p class="text-xs text-red-500 mt-1">更换不同维度的模型会清空所有知识库</p>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="px-6 pb-6 pt-4 border-t border-gray-100 bg-white/95 backdrop-blur flex gap-3 sticky bottom-0 left-0 right-0">
+
+                <div class="px-6 pb-6 pt-4 border-t border-gray-100 bg-white/95 backdrop-blur flex gap-3 flex-shrink-0">
                     <button type="button" onclick="closeModal()"
                         class="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors">
                         取消
@@ -389,13 +455,158 @@
                 <button id="forceActivateBtn" onclick="confirmForceActivation()" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>确认删除并切换</button>
             </div>
         </div>
+    <!-- 测试结果详情弹窗 -->
+    <div id="testResultModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+        <div class="modal-backdrop absolute inset-0" onclick="closeTestResultModal()"></div>
+        <div class="glass-card relative z-10 w-full max-w-lg mx-4 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-4 flex items-center justify-between flex-shrink-0">
+                <h2 class="text-xl font-bold text-white">测试结果：<span id="testResultTitle"></span></h2>
+                <button onclick="closeTestResultModal()" class="text-white/80 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-0 overflow-y-auto flex-1 min-h-0">
+                <div id="testResulList" class="divide-y divide-gray-100">
+                    <!-- 结果列表 -->
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end flex-shrink-0">
+                <button onclick="closeTestResultModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">关闭</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8090/api/v1/llm';
+        const API_BASE = '/api/v1/llm';
         let configs = [];
-        let pendingEmbeddingActivation = null;
+        let currentTags = []; // 当前编辑的标签列表
+        
+        // 页面加载完成后加载配置
+        document.addEventListener('DOMContentLoaded', loadConfigs);
 
+        // 处理标签输入
+        function handleTagInput(event) {
+            if (event.key === 'Enter' || event.key === ',') {
+                event.preventDefault();
+                addTag(event.target.value);
+                event.target.value = '';
+            } else if (event.key === 'Backspace' && event.target.value === '' && currentTags.length > 0) {
+                // 删除最后一个
+                removeTag(currentTags.length - 1);
+            }
+        }
+
+        // 添加标签
+        function addTag(text) {
+            const tag = text ? text.trim() : '';
+            if (tag && !currentTags.includes(tag)) {
+                currentTags.push(tag);
+                renderTags();
+            }
+        }
+
+        // 删除标签
+        function removeTag(index) {
+            currentTags.splice(index, 1);
+            renderTags();
+        }
+
+        // 渲染标签
+        function renderTags() {
+            const container = document.getElementById('tagsContainer');
+            container.innerHTML = currentTags.map((tag, index) => `
+                <div class="model-tag">
+                    <span>${escapeHtml(tag)}</span>
+                    <span class="remove-tag" onclick="event.stopPropagation(); removeTag(${index})">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // 关闭测试结果弹窗
+        function closeTestResultModal() {
+            document.getElementById('testResultModal').classList.add('hidden');
+        }
+
+        // 测试连接
+        async function testConnection(id) {
+            const config = configs.find(c => c.id === id);
+            if (!config) return;
+            
+            const btn = document.getElementById(`test-btn-${id}`);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<div class="flex justify-center items-center"><svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg></div>`;
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/configs/test`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                const result = await response.json();
+
+                // 只要是 "0000" 就说明有结果返回（可能是部分成功，也可能是全部成功）
+                // 或者是 "5001" (所有都失败)
+                if (result.code === '0000' || result.code === '5001') {
+                    const testResults = result.data || [];
+                    const allSuccess = testResults.every(r => r.success);
+                    
+                    if (allSuccess && testResults.length > 0) {
+                        // 全部成功，显示绿色勾
+                        btn.innerHTML = `<div class="flex justify-center items-center"><svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>`;
+                        showToast('success', `「${config.name}」所有模型连接测试成功！`);
+                        setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+                    } else {
+                        // 部分成功或失败，显示详情弹窗
+                        showTestResultModal(config.name, testResults);
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+                } else {
+                    showToast('error', `「${config.name}」连接失败: ${result.info || '未知错误'}`);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('测试失败:', error);
+                showToast('error', `「${config.name}」网络错误，测试失败`);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // 显示测试结果详情
+        function showTestResultModal(configName, results) {
+            document.getElementById('testResultTitle').textContent = configName;
+            const listContainer = document.getElementById('testResulList');
+            
+            if (!results || results.length === 0) {
+                listContainer.innerHTML = '<div class="p-6 text-center text-gray-500">无测试结果</div>';
+            } else {
+                listContainer.innerHTML = results.map(r => `
+                    <div class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3">
+                        <div class="mt-0.5 flex-shrink-0">
+                            ${r.success 
+                                ? `<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                                : `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                            }
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-medium ${r.success ? 'text-gray-900' : 'text-red-700'}">${escapeHtml(r.model)}</h4>
+                            ${!r.success ? `<p class="text-xs text-red-500 mt-1 break-all">${escapeHtml(r.errorInfo || '未知错误')}</p>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('testResultModal').classList.remove('hidden');
+        }
         // 提供商类型映射
         const providerLabels = {
             'OPENAI': { label: 'OpenAI', color: 'bg-green-100 text-green-700' },
@@ -474,6 +685,9 @@
 
             grid.innerHTML = configs.map((config, index) => {
                 const provider = providerLabels[config.providerType] || { label: config.providerType, color: 'bg-gray-100 text-gray-700' };
+                const hasChatCapability = config.defaultModel || (config.models && config.models.length > 0);
+                const hasEmbeddingCapability = !!config.embeddingModel;
+                
                 return `
                     <div class="config-card ${config.active ? 'active' : ''} p-5 bg-white rounded-xl border-2 ${config.active ? 'border-green-400' : 'border-gray-100'}" style="animation-delay: ${index * 0.05}s">
                         <div class="flex items-start justify-between mb-4">
@@ -525,12 +739,12 @@
                         </div>
                         
                         <div class="flex items-center gap-2 pt-3 border-t border-gray-100">
-                            ${!config.active ? `
+                            ${!config.active && hasChatCapability ? `
                                 <button onclick="activateConfig('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
                                     激活
                                 </button>
                             ` : ''}
-                            ${config.embeddingModel ? `
+                            ${hasEmbeddingCapability ? `
                                 ${!config.activeForEmbedding ? `
                                     <button onclick="activateEmbedding('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
                                         激活 Embedding
@@ -545,7 +759,7 @@
                             <button onclick="editConfig('${config.id}')" class="flex-1 px-3 py-2 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
                                 编辑
                             </button>
-                            ${!config.active ? `
+                            ${!config.active && !config.activeForEmbedding ? `
                                 <button onclick="deleteConfig('${config.id}')" class="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                                     删除
                                 </button>
@@ -599,11 +813,43 @@
             }
         }
 
+        // 切换区块显示
+        function toggleSections() {
+            const enableChat = document.getElementById('enableChat').checked;
+            const enableEmbedding = document.getElementById('enableEmbedding').checked;
+            
+            const chatSection = document.getElementById('chatSection');
+            const embeddingSection = document.getElementById('embeddingSection');
+            
+            if (enableChat) {
+                chatSection.classList.remove('hidden');
+            } else {
+                chatSection.classList.add('hidden');
+            }
+            
+            if (enableEmbedding) {
+                embeddingSection.classList.remove('hidden');
+            } else {
+                embeddingSection.classList.add('hidden');
+            }
+        }
+
         // 打开添加弹窗
         function openAddModal() {
             document.getElementById('modalTitle').textContent = '添加配置';
             document.getElementById('configForm').reset();
             document.getElementById('configId').value = '';
+            
+            // 重置标签
+            currentTags = [];
+            renderTags();
+            document.getElementById('tagInput').value = '';
+            
+            // 默认开启聊天
+            document.getElementById('enableChat').checked = true;
+            document.getElementById('enableEmbedding').checked = false;
+            
+            toggleSections();
             onProviderTypeChange();
             document.getElementById('configModal').classList.remove('hidden');
         }
@@ -636,18 +882,47 @@
         function editConfig(id) {
             const config = configs.find(c => c.id === id);
             if (!config) return;
-
+            
             document.getElementById('modalTitle').textContent = '编辑配置';
             document.getElementById('configId').value = config.id;
             document.getElementById('configName').value = config.name;
             document.getElementById('providerType').value = config.providerType;
             document.getElementById('baseUrl').value = config.baseUrl;
             document.getElementById('apiKey').value = config.apiKey || '';
+            
+            // 设置聊天配置
             document.getElementById('defaultModel').value = config.defaultModel || '';
-            document.getElementById('models').value = (config.models || []).join('\n');
+            // document.getElementById('models').value = (config.models || []).join(', ');
+            
+            // 初始化标签
+            currentTags = config.models ? [...config.models] : [];
+            renderTags();
+            document.getElementById('tagInput').value = '';
+            
+            // 设置 Embedding 配置
             document.getElementById('embeddingModel').value = config.embeddingModel || '';
             document.getElementById('embeddingDimension').value = config.embeddingDimension || '';
             
+            // 设置开关状态：如果有值则开启，否则关闭
+            // 特殊情况：如果两者都没有值，怎么判断？
+            // 策略：如果有 defaultModel 或 models 有值，则认为开启了 Chat
+            // 如果 embeddingModel 有值，则认为开启了 Embedding
+            
+            const hasChatConfig = config.defaultModel || (config.models && config.models.length > 0);
+            const hasEmbeddingConfig = config.embeddingModel;
+            
+            // 如果都为空，默认开启 Chat
+            if (!hasChatConfig && !hasEmbeddingConfig) {
+                 document.getElementById('enableChat').checked = true;
+                 document.getElementById('enableEmbedding').checked = false;
+            } else {
+                 document.getElementById('enableChat').checked = !!hasChatConfig;
+                 // 允许手动只开启 Embedding 而不填已有的 chat 配置（虽然少见），但主要是为了回显
+                 // 但这里简单点，只看是否有值
+                 document.getElementById('enableEmbedding').checked = !!hasEmbeddingConfig;
+            }
+            
+            toggleSections();
             onProviderTypeChange();
             document.getElementById('configModal').classList.remove('hidden');
         }
@@ -657,21 +932,38 @@
             event.preventDefault();
 
             const id = document.getElementById('configId').value;
-            const modelsStr = document.getElementById('models').value;
-            // 支持逗号和换行分隔
-            const models = modelsStr ? modelsStr.split(/[,\n]/).map(m => m.trim()).filter(m => m) : [];
+            const enableChat = document.getElementById('enableChat').checked;
+            const enableEmbedding = document.getElementById('enableEmbedding').checked;
+            
+            if (!enableChat && !enableEmbedding) {
+                alert('请至少开启一项功能（对话或 Embedding）');
+                return;
+            }
+
+            // const modelsStr = document.getElementById('models').value;
+            // // 支持中英文逗号、换行、空格分隔
+            // const models = modelsStr ? modelsStr.split(/[,，\n\s]+/).map(m => m.trim()).filter(m => m) : [];
+            
+            const models = [...currentTags];
+
+            // 根据开关获取值，关闭则为 null
+            const defaultModel = enableChat ? (document.getElementById('defaultModel').value || null) : null;
+            const finalModels = enableChat ? models : [];
+            const embeddingModel = enableEmbedding ? (document.getElementById('embeddingModel').value || null) : null;
+            const embeddingDimension = (enableEmbedding && document.getElementById('embeddingDimension').value) 
+                                        ? Number(document.getElementById('embeddingDimension').value) : null;
 
             const config = {
                 name: document.getElementById('configName').value,
                 providerType: document.getElementById('providerType').value,
                 baseUrl: document.getElementById('baseUrl').value,
                 apiKey: document.getElementById('apiKey').value || null,
-                defaultModel: document.getElementById('defaultModel').value || null,
-                models: models,
-                embeddingModel: document.getElementById('embeddingModel').value || null,
-                embeddingDimension: document.getElementById('embeddingDimension').value ? Number(document.getElementById('embeddingDimension').value) : null
+                defaultModel: defaultModel,
+                models: finalModels,
+                embeddingModel: embeddingModel,
+                embeddingDimension: embeddingDimension
             };
-
+            
             try {
                 const url = id ? `${API_BASE}/configs/${id}` : `${API_BASE}/configs`;
                 const method = id ? 'PUT' : 'POST';
@@ -698,10 +990,20 @@
 
 
 
+
+
+        // 测试连接
         // 测试连接
         async function testConnection(id) {
-            const config = configs.find(c => c.id === id);
-            if (!config) return;
+            console.log('Testing connection for ID:', id, typeof id);
+            // 使用 == 兼容类型
+            const config = configs.find(c => c.id == id);
+            console.log('Config found:', config);
+            
+            if (!config) {
+                console.error('Config not found for ID:', id);
+                return;
+            }
             
             const btn = document.getElementById(`test-btn-${id}`);
             const originalText = btn.innerHTML;
@@ -716,10 +1018,38 @@
                 });
                 const result = await response.json();
 
-                if (result.code === '0000' && result.data === true) {
-                    btn.innerHTML = `<div class="flex justify-center items-center"><svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>`;
-                    showToast('success', `「${config.name}」连接测试成功！`);
-                    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+                if (result.code === '0000' && Array.isArray(result.data)) {
+                    // 恢复按钮状态
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    
+                    // 渲染结果列表
+                    const results = result.data;
+                    const listContainer = document.getElementById('testResulList');
+                    document.getElementById('testResultTitle').textContent = config.name;
+                    
+                    if (!results || results.length === 0) {
+                        listContainer.innerHTML = '<div class="p-6 text-center text-gray-500">无测试结果</div>';
+                    } else {
+                        listContainer.innerHTML = results.map(r => `
+                            <div class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3">
+                                <div class="mt-0.5 flex-shrink-0">
+                                    ${r.success 
+                                        ? `<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                                        : `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                                    }
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium ${r.success ? 'text-gray-900' : 'text-red-700'}">${escapeHtml(r.model)}</h4>
+                                    ${!r.success ? `<p class="text-xs text-red-500 mt-1 break-all">${escapeHtml(r.errorInfo || '未知错误')}</p>` : ''}
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                    
+                    // 显示弹窗
+                    document.getElementById('testResultModal').classList.remove('hidden');
+                    
                 } else {
                     showToast('error', `「${config.name}」连接失败: ${result.info || '未知错误'}`);
                     btn.innerHTML = originalText;

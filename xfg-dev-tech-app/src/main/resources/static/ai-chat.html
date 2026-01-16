@@ -15,6 +15,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
+    <!-- KaTeX for Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -55,6 +60,12 @@
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        
+        .animate-modal-in { animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
 
         /* Markdown 样式覆盖 */
         .prose pre { margin: 0; padding: 0; background: transparent; }
@@ -90,6 +101,48 @@
             <div class="px-6 pb-6 flex justify-end">
                 <button id="modalAlertConfirm" class="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow">
                     确定
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 知识库选择模态框 -->
+    <div id="ragSelectorModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeRagSelector()"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[80vh] overflow-hidden animate-modal-in">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 tracking-tight">管理知识库</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="ragSelectorCount" class="text-xs font-semibold text-purple-600 bg-purple-50 border border-purple-100 px-2.5 py-1 rounded-full">已选: 0/10</span>
+                    <button onclick="toggleSelectAllInModal()" class="text-xs font-medium text-gray-500 hover:text-purple-600 hover:underline transition-colors">全选</button>
+                </div>
+            </div>
+            
+            <!-- List -->
+            <div class="p-6 overflow-y-auto flex-1 custom-scrollbar bg-gray-50/30">
+               <div id="ragOptionList" class="grid grid-cols-1 gap-2.5">
+                   <!-- Options go here -->
+               </div>
+               <div id="ragEmptyState" class="hidden flex flex-col items-center justify-center py-12 text-center">
+                   <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3 text-gray-400">
+                       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                   </div>
+                   <p class="text-gray-500 text-sm font-medium">暂无更多可选知识库</p>
+                   <p class="text-gray-400 text-xs mt-1">请联系管理员添加知识库</p>
+               </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
+                <button onclick="closeRagSelector()" class="px-5 py-2.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 font-medium text-sm rounded-xl transition-all">取消</button>
+                <button onclick="confirmRagSelection()" class="px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-medium text-sm rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all flex items-center gap-2 active:scale-95">
+                    <span>确定选择</span>
                 </button>
             </div>
         </div>
@@ -173,7 +226,6 @@
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                 添加
                             </button>
-                            <button onclick="selectAllRagTags()" class="py-1.5 px-2 text-[10px] font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">全选</button>
                             <button onclick="clearAllRagTags()" class="py-1.5 px-2 text-[10px] font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">清空</button>
                         </div>
                     </div>
@@ -431,6 +483,7 @@
         // 知识库多选相关变量
         let allRagTags = [];          // 所有可用的知识库列表
         let selectedRagTags = [];     // 已选中的知识库
+        let tempSelectedRagTags = []; // 模态框中的临时选择
         const MAX_RAG_TAGS = 10;      // 最大选择数
 
         // 加载知识库列表
@@ -478,23 +531,97 @@
 
         // 打开知识库选择弹窗
         function openRagTagSelector() {
-            if (selectedRagTags.length >= MAX_RAG_TAGS) {
-                showModalAlert({ title: '已达上限', message: `最多只能选择 ${MAX_RAG_TAGS} 个知识库`, confirmText: '我知道了' });
+            // 初始化临时选择
+            tempSelectedRagTags = [...selectedRagTags];
+            renderRagSelectionList();
+            
+            const modal = document.getElementById('ragSelectorModal');
+            modal.classList.remove('hidden');
+            // 添加小动画
+            const content = modal.querySelector('div.relative');
+            content.classList.remove('translate-y-4', 'opacity-0');
+        }
+
+        // 关闭知识库选择弹窗
+        function closeRagSelector() {
+            const modal = document.getElementById('ragSelectorModal');
+            modal.classList.add('hidden');
+        }
+
+        // 渲染选择列表
+        function renderRagSelectionList() {
+            const listEl = document.getElementById('ragOptionList');
+            const emptyEl = document.getElementById('ragEmptyState');
+            const countEl = document.getElementById('ragSelectorCount');
+
+            // 更新计数
+            countEl.textContent = `已选: ${tempSelectedRagTags.length}/${MAX_RAG_TAGS}`;
+            
+            // 混合列表：已经选的 + 未选的（allRagTags）
+            // 确保不重复，并保持选中状态
+            // Set for O(1) lookup
+            const tempSet = new Set(tempSelectedRagTags);
+            
+            // 组合并去重，这里假设 allRagTags 包含所有可能的标签
+            // 如果 user 手动输入过不在 allRagTags 里的？(旧逻辑允许) -> 暂时假设 allRagTags 是全集
+            // 如果 selected 有不在 all 里的，也得加上
+            const displayTags = Array.from(new Set([...allRagTags, ...selectedRagTags])).sort();
+
+            if (displayTags.length === 0) {
+                listEl.innerHTML = '';
+                listEl.classList.add('hidden');
+                emptyEl.classList.remove('hidden');
                 return;
             }
-            const availableTags = allRagTags.filter(t => !selectedRagTags.includes(t));
-            if (availableTags.length === 0) {
-                showModalAlert({ title: '无可选知识库', message: '所有知识库已选中或暂无可用知识库', confirmText: '好的' });
-                return;
+
+            listEl.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+
+            listEl.innerHTML = displayTags.map(tag => {
+                const isSelected = tempSet.has(tag);
+                const isMaxReached = !isSelected && tempSelectedRagTags.length >= MAX_RAG_TAGS;
+                
+                return `
+                <label class="group relative flex items-center p-3 rounded-xl border transition-all cursor-pointer ${isSelected ? 'bg-purple-50 border-purple-200 shadow-sm' : 'bg-white border-gray-100 hover:border-purple-100 hover:bg-gray-50'} ${isMaxReached ? 'opacity-50 cursor-not-allowed grayscale' : ''}">
+                    <input type="checkbox" 
+                        class="peer sr-only" 
+                        value="${escapeHtml(tag)}" 
+                        ${isSelected ? 'checked' : ''} 
+                        ${isMaxReached ? 'disabled' : ''}
+                        onchange="toggleRagSelection(this, '${escapeHtml(tag)}')"
+                    >
+                    <div class="w-5 h-5 rounded border flex items-center justify-center mr-3 transition-colors ${isSelected ? 'bg-purple-500 border-purple-500' : 'bg-white border-gray-300 group-hover:border-purple-300'}">
+                        <svg class="w-3.5 h-3.5 text-white ${isSelected ? 'block' : 'hidden'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <span class="text-sm font-medium truncate select-none ${isSelected ? 'text-purple-700' : 'text-gray-700'}">${escapeHtml(tag)}</span>
+                    </div>
+                </label>
+                `;
+            }).join('');
+        }
+
+        // 切换选择
+        function toggleRagSelection(checkbox, tag) {
+            if (checkbox.checked) {
+                if (tempSelectedRagTags.length >= MAX_RAG_TAGS) {
+                    checkbox.checked = false; // 回滚
+                    showModalAlert({ title: '已达上限', message: `最多只能选择 ${MAX_RAG_TAGS} 个知识库` });
+                    return;
+                }
+                tempSelectedRagTags.push(tag);
+            } else {
+                tempSelectedRagTags = tempSelectedRagTags.filter(t => t !== tag);
             }
-            // 简单实现：使用 prompt 多选（生产环境建议用模态框）
-            const input = prompt(`可选知识库：\n${availableTags.join('\n')}\n\n请输入要添加的知识库名称（多个用逗号分隔）：`);
-            if (input) {
-                const toAdd = input.split(',').map(s => s.trim()).filter(s => availableTags.includes(s));
-                const remaining = MAX_RAG_TAGS - selectedRagTags.length;
-                selectedRagTags.push(...toAdd.slice(0, remaining));
-                renderSelectedRagTags();
-            }
+            // 重新渲染以更新计数和禁用状态
+            renderRagSelectionList();
+        }
+
+        // 确认选择
+        function confirmRagSelection() {
+            selectedRagTags = [...tempSelectedRagTags];
+            renderSelectedRagTags();
+            closeRagSelector();
         }
 
         // 移除单个标签
@@ -503,10 +630,25 @@
             renderSelectedRagTags();
         }
 
-        // 全选
-        function selectAllRagTags() {
-            selectedRagTags = allRagTags.slice(0, MAX_RAG_TAGS);
-            renderSelectedRagTags();
+        // 切换全选/取消全选
+        function toggleSelectAllInModal() {
+            // 简单判断：如果还没满，就全选（最多10个）；如果已经有一些且想全选 -> 其实全选通常意味着"把所有可选的都选上"
+            // 但这里有上限限制。策略：
+            // 1. 如果当前已选 < min(上限, 总数)，则尝试选满
+            // 2. 如果已经选满或者选了所有可选项，则清空
+            
+            // 可选项 = allRagTags
+            const maxAllowed = Math.min(allRagTags.length, MAX_RAG_TAGS);
+            
+            // 如果已经选满了(或者选了所有能选的)，就清空
+            if (tempSelectedRagTags.length >= maxAllowed) {
+                 tempSelectedRagTags = [];
+            } else {
+                // 全选：从 allRagTags 里取前 10 个
+                 tempSelectedRagTags = allRagTags.slice(0, MAX_RAG_TAGS);
+            }
+            
+            renderRagSelectionList();
         }
 
         // 清空
@@ -697,6 +839,11 @@
                         </div>
                     </div>`;
                 }).join('') + `</div>`;
+
+            
+            // Render Math
+            renderMath(container);
+            
             scrollToBottom();
         }
 
@@ -740,10 +887,11 @@
                 const contentDiv = document.getElementById(`msg-content-${lastMsgIndex}`);
                 if (contentDiv) {
                     contentDiv.innerHTML = marked.parse(filterContent(content));
+                    renderMath(contentDiv);
                     // 这里不需要 scrollToBottom，除非是大量内容，且用户已在底部
                     // scrollToBottom(); 
                 } else {
-                    renderMessages(); 
+                    renderMessages();
                 }
             }
         }
@@ -803,9 +951,14 @@
         });
 
         function sendMessage() {
+            if (isGenerating) {
+                console.log('Sending blocked: already generating');
+                return;
+            }
+            
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
-            if (!message || isGenerating) return;
+            if (!message) return;
 
             if (document.getElementById('configSelect').options.length === 0) {
               showModalAlert({
@@ -815,6 +968,8 @@
               });
               return;
             }
+            
+            console.log('Sending message:', message);
 
             input.value = '';
             input.style.height = 'auto';
@@ -827,10 +982,13 @@
 
             isGenerating = true;
             updateSendButton();
-            addMessage('assistant', ''); 
-            renderMessages();
-
-            startStreamRequest(message);
+            
+            // 延迟一点添加 AI 消息，防止极端情况下 UI 抖动或重复
+            requestAnimationFrame(() => {
+                 addMessage('assistant', ''); 
+                 renderMessages();
+                 startStreamRequest(message);
+            });
         }
 
         function updateModelOptions(config) {
@@ -1064,6 +1222,20 @@
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+        }
+
+        function renderMath(element) {
+            if (typeof renderMathInElement !== 'undefined') {
+                renderMathInElement(element, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '\\[', right: '\\]', display: true},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '$', right: '$', display: false}
+                    ],
+                    throwOnError: false
+                });
+            }
         }
     </script>
 </body>

@@ -1,6 +1,7 @@
 package com.xbk.xfg.dev.tech.api;
 
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.http.codec.ServerSentEvent;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
@@ -28,9 +29,9 @@ public interface IAiService {
      *
      * @param model   模型名称（如：gpt-4o, gpt-3.5-turbo, qwen-plus）
      * @param message 用户消息内容
-     * @return 流式响应 Flux
+     * @return SSE 事件流
      */
-    Flux<ChatResponse> generateStream(String model, String message);
+    Flux<ServerSentEvent<Object>> generateStream(String model, String message);
 
     /**
      * 基于 RAG（检索增强生成）的流式对话
@@ -40,7 +41,7 @@ public interface IAiService {
      * @param model   模型名称（如：gpt-4o, gpt-3.5-turbo, qwen-plus）
      * @param ragTags 知识库标签列表（用于过滤特定知识库），为空则不使用知识库
      * @param message 用户消息内容
-     * @return 流式响应 Flux
+     * @return SSE 事件流
      */
-    Flux<ChatResponse> generateStreamRag(String model, List<String> ragTags, String message);
+    Flux<ServerSentEvent<Object>> generateStreamRag(String model, List<String> ragTags, String message);
 }

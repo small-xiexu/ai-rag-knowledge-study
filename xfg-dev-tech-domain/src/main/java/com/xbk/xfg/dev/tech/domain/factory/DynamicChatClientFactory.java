@@ -294,33 +294,87 @@ public class DynamicChatClientFactory {
      * @param config 要测试的配置
      * @return true 连接成功，false 连接失败
      */
-    public boolean testConnection(LlmProviderConfigDTO config) {
-        try {
-            // 使用策略创建临时客户端
-            ChatClientWrapper client = createChatClient(config);
-
-            // 获取测试用的模型名称
-            String testModel = getTestModel(config);
-            
-            // 构建测试提示词，根据提供商类型使用不同的 Options
-            Prompt prompt;
-            if ("OLLAMA".equalsIgnoreCase(config.getProviderType())) {
-                prompt = new Prompt("hi", OllamaOptions.builder().model(testModel).build());
-            } else {
-                prompt = new Prompt("hi", OpenAiChatOptions.builder().model(testModel).build());
-            }
-
-            // 发送测试请求
-            ChatResponse response = client.call(prompt);
-            String content = response.getResult().getOutput().getText();
-
-            log.info("测试连接成功! 提供商: {}, 模型: {}, 响应: {}",
-                    config.getProviderType(), testModel, content);
-            return true;
-        } catch (Exception e) {
-            log.warn("测试连接失败: {}", e.getMessage());
-            return false;
+    /**
+     * 测试配置连接 - 用于验证配置是否正确
+     * 遍历测试所有配置的模型
+     *
+     * @param config 要测试的配置
+     * @return 测试结果列表
+     */
+    public List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO> testConnection(LlmProviderConfigDTO config) {
+        List<com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO> results = new java.util.ArrayList<>();
+        
+        // 1. 确定要测试的模型列表
+        List<String> modelsToTest = new java.util.ArrayList<>();
+        
+        // 优先使用 models列表
+        if (config.getModels() != null && !config.getModels().isEmpty()) {
+            modelsToTest.addAll(config.getModels());
+        } 
+        // 其次使用 defaultModel
+        else if (config.getDefaultModel() != null && !config.getDefaultModel().isEmpty()) {
+            modelsToTest.add(config.getDefaultModel());
         }
+        // 最后使用系统默认
+        else {
+            modelsToTest.add(getTestModel(config));
+        }
+
+        // 去重
+        modelsToTest = modelsToTest.stream().distinct().toList();
+
+        // 2. 遍历测试
+        // 创建临时客户端（不缓存）
+        ChatClientWrapper client;
+        try {
+             client = createChatClient(config);
+        } catch (Exception e) {
+            // 如果连客户端都创建失败，所有模型都标记为失败
+            for (String model : modelsToTest) {
+                results.add(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO.builder()
+                        .model(model)
+                        .success(false)
+                        .errorInfo("客户端创建失败: " + e.getMessage())
+                        .build());
+            }
+            return results;
+        }
+
+        for (String model : modelsToTest) {
+            try {
+                // 构建测试提示词
+                Prompt prompt;
+                if ("OLLAMA".equalsIgnoreCase(config.getProviderType())) {
+                    prompt = new Prompt("hi", OllamaOptions.builder().model(model).build());
+                } else {
+                    prompt = new Prompt("hi", OpenAiChatOptions.builder().model(model).build());
+                }
+
+                // 发送测试请求
+                ChatResponse response = client.call(prompt);
+                String content = response.getResult().getOutput().getText();
+                
+                log.info("测试连接成功! 提供商: {}, 模型: {}, 响应: {}", 
+                        config.getProviderType(), model, content);
+                
+                results.add(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO.builder()
+                        .model(model)
+                        .success(true)
+                        .build());
+                        
+            } catch (Exception e) {
+                log.warn("测试连接失败: 提供商: {}, 模型: {}, 错误: {}", 
+                        config.getProviderType(), model, e.getMessage());
+                
+                results.add(com.xbk.xfg.dev.tech.api.dto.ModelTestResultDTO.builder()
+                        .model(model)
+                        .success(false)
+                        .errorInfo(e.getMessage())
+                        .build());
+            }
+        }
+        
+        return results;
     }
 
     /**
